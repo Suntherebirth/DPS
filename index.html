@@ -2,13 +2,13 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-  <title>이글스 성과평가 단축키 입력 시스템 v3.0</title>
+  <title>이글스 성과평가 단축키 입력 시스템 v3.1</title>
   <style>
     body { font-family: sans-serif; margin: 30px; }
     h1 { margin-bottom: 10px; }
     .lineup-input { margin-bottom: 20px; }
     .lineup-input input { margin: 2px; }
-    .actions { margin: 6px 0; }
+    .actions { margin: 6px 0; display:flex; gap:8px; }
 
     #stepProgress { margin: 12px 0 16px; display: flex; flex-wrap: wrap; gap: 8px; }
     .stepBox {
@@ -29,14 +29,13 @@
     th { background-color: #f2f2f2; }
     .flash-bg { background-color: #cce5ff; transition: background-color 0.6s ease; }
 
-    /* 상단 레이아웃: 왼쪽 legend, 오른쪽 라인업 전체 박스 */
     .topRow { display: flex; align-items: flex-start; gap: 16px; }
 
-    /* 선택지 박스: v3.0에서 살짝 더 짙게 */
+    /* 선택지 박스: v3.0보다 살짝 더 짙게 */
     #legendBox {
       flex: 0 0 300px; max-width: 300px;
       margin: 15px 0 8px 0; padding: 10px 15px;
-      border: 1px solid #cfd8e3; background-color: #e9eef5; /* 기존 #f9f9f9 → 살짝 진하게 */
+      border: 1px solid #cfd8e3; background-color: #e9eef5;
       border-radius: 6px;
     }
     #legendBox strong { display:block; margin-bottom:4px; }
@@ -45,15 +44,13 @@
     .red { color: red; font-weight: bold; }
     .green { color: green; font-weight: bold; }
 
-    /* 오른쪽: 큰 라인업 박스 */
     #lineupSummary {
       flex: 1 1 auto;
       border: 1px solid #ddd; background: #f9f9f9;
-      padding: 12px; display: none;  /* 적용 전엔 숨김 */
+      padding: 12px; display: none;
     }
     #lineupSummary h3 { margin: 0 0 8px; }
 
-    /* 큰 박스 내부: 두 개의 소박스(선발/교체) 나란히 */
     #lineupWrapper {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -66,33 +63,39 @@
     .lineupPanel h4 { margin: 0 0 6px; font-size: 14px; }
     .key { width: 28px; display: inline-block; color: #888; }
     #starterList > div, #benchList > div { border-bottom: 1px dashed #eee; padding: 2px 0; }
+
+    /* 위험 버튼 스타일 약간 */
+    .btn-danger { background:#dc3545; color:#fff; border:none; padding:6px 10px; cursor:pointer; }
+    .btn { background:#eee; border:1px solid #ccc; padding:6px 10px; cursor:pointer; }
   </style>
 </head>
 <body>
   <h1>
-  <img src="IMG_2742.png" alt="이글스 로고" style="width:50px;height:50px;vertical-align:middle;margin-right:8px;">
-  이글스 성과평가 단축키 입력 시스템 <span style="font-size:.7em;color:#888;">v3.0</span>
-</h1>
-    <!-- 라인업 입력 -->
+    <img src="IMG_2742.png" alt="이글스 로고" style="width:50px;height:50px;vertical-align:middle;margin-right:8px;">
+    이글스 성과평가 단축키 입력 시스템 <span style="font-size:.7em;color:#888;">v3.1</span>
+  </h1>
+
+  <!-- 라인업 입력 -->
   <div class="lineup-input" id="lineupInput">
     <div><strong>선발 (1~9번):</strong></div>
     <div id="starterInputs"></div>
     <div style="margin-top:6px;"><strong>대기 (q~t):</strong></div>
     <div id="benchInputs"></div>
-    <button style="margin-top:8px;" onclick="applyLineup()">라인업 적용</button>
+    <div class="actions" style="margin-top:8px;">
+      <button class="btn" onclick="applyLineup()">라인업 적용</button>
+      <button class="btn" onclick="clearLineupInputs()">입력 비우기</button>
+    </div>
   </div>
 
   <!-- 진행 스텝 표시 -->
   <div id="stepProgress"></div>
 
-  <!-- 상단: 왼쪽(legend) + 오른쪽(라인업 패널들) -->
   <div class="topRow">
     <div id="legendBox">
       <strong>선택지 (단축키 입력 가능):</strong>
       <ul id="legendList"></ul>
     </div>
 
-    <!-- 큰 라인업 박스: 내부에 두 개 소박스 -->
     <div id="lineupSummary">
       <h3>라인업</h3>
       <div id="lineupWrapper">
@@ -109,17 +112,18 @@
   </div>
 
   <div id="currentInputLine">[현재 입력 중] → </div>
-  <div id="hint">ESC: 전체 초기화 / Backspace: 한 단계 롤백</div>
+  <div id="hint">ESC: 전체 초기화(스텝만) / Backspace: 한 단계 롤백</div>
 
   <!-- 로그 -->
   <div class="log">
-    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 5px;">
-  <h2 style="margin: 0;">입력 로그</h2>
-  <div class="actions">
-    <button id="deleteSelected">선택 삭제</button>
-    <button id="exportCsv">CSV 다운로드</button>
-  </div>
-</div>
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:5px;">
+      <h2 style="margin:0;">입력 로그</h2>
+      <div class="actions">
+        <button id="deleteSelected" class="btn">선택 삭제</button>
+        <button id="exportCsv" class="btn">CSV 다운로드</button>
+        <button id="resetAll" class="btn-danger" title="라인업/진행상태/로그 전체 삭제">전체 초기화</button>
+      </div>
+    </div>
     <table id="logTable">
       <thead>
         <tr>
@@ -144,7 +148,7 @@
   </div>
 
 <script>
-/* ====== CODE RULES (간단 유지) ====== */
+/* ====== CODE RULES ====== */
 window.CODE_RULES = [
   { code: "B-SO-O", score: -1.5, when: { event: "[삼진/사사구/기타 이벤트]", type: "[삼진]", result: "[아웃]" } },
   { code: "B-SO-S", score: 0,    when: { event: "[삼진/사사구/기타 이벤트]", type: "[삼진]", result: "[출루]" } },
@@ -254,7 +258,6 @@ let lineupMap = {};
 let lineupApplied = false;
 let logSeq = 0;
 
-/* ====== 스텝 정의 ====== */
 const steps = [
   { name: "이닝 선택",   options: ["[1회]", "[2회]", "[3회]", "[4회]", "[5회]", "[6회]"] },
   { name: "타순 선택",   options: ["[1번타자]", "[2번타자]", "[3번타자]", "[4번타자]", "[5번타자]", "[6번타자]", "[7번타자]", "[8번타자]", "[9번타자]"] },
@@ -271,10 +274,84 @@ let currentStep = 0;
 let currentValues = [];
 let eventType = "";
 
-/* ====== 유틸 ====== */
-function stripBrackets(str) {
-  return str ? str.replace(/\[|\]/g, '') : '';
+/* ====== 자동저장 설정 ====== */
+const LS_PREFIX = "eagles_v31_";
+const LS_KEYS = {
+  lineup: LS_PREFIX + "lineup",
+  table : LS_PREFIX + "table",
+  state : LS_PREFIX + "state",
+  meta  : LS_PREFIX + "meta"
+};
+let saveTimer = null;
+function scheduleSave(){ clearTimeout(saveTimer); saveTimer = setTimeout(saveAll, 250); }
+function saveAll(){
+  try{
+    // 라인업
+    const lineupPayload = {
+      lineupMap, lineupApplied,
+      starterKeys, benchKeys
+    };
+    localStorage.setItem(LS_KEYS.lineup, JSON.stringify(lineupPayload));
+
+    // 테이블(로그)
+    const tableData = serializeTable();
+    localStorage.setItem(LS_KEYS.table, JSON.stringify({ logSeq, rows: tableData }));
+
+    // 진행 상태
+    const statePayload = { currentStep, currentValues, eventType, stepsOptions3: steps[2].options };
+    localStorage.setItem(LS_KEYS.state, JSON.stringify(statePayload));
+
+    // 메타(타임스탬프)
+    localStorage.setItem(LS_KEYS.meta, JSON.stringify({ savedAt: Date.now() }));
+  }catch(e){
+    console.warn("자동저장 실패:", e);
+  }
 }
+function loadAll(){
+  try{
+    const line = JSON.parse(localStorage.getItem(LS_KEYS.lineup) || "null");
+    const table = JSON.parse(localStorage.getItem(LS_KEYS.table)  || "null");
+    const state = JSON.parse(localStorage.getItem(LS_KEYS.state)  || "null");
+
+    // 라인업 복구
+    if (line && line.lineupMap) {
+      lineupMap = line.lineupMap || {};
+      lineupApplied = !!line.lineupApplied;
+      renderLineupSummary();
+      // 선수 선택 옵션 복구
+      const playerOptions = [];
+      starterKeys.forEach(k => { if (lineupMap[k]) playerOptions.push({ key: k, label: lineupMap[k] }); });
+      benchKeys.forEach(k   => { if (lineupMap[k]) playerOptions.push({ key: k, label: lineupMap[k] }); });
+      steps[2].options = playerOptions;
+      if (lineupApplied) document.getElementById("lineupInput").style.display = "none";
+    }
+
+    // 테이블 복구
+    if (table && Array.isArray(table.rows)) {
+      logSeq = table.logSeq || table.rows.length;
+      renderTableFrom(table.rows);
+    }
+
+    // 상태 복구
+    if (state) {
+      currentStep = state.currentStep || 0;
+      currentValues = Array.isArray(state.currentValues) ? state.currentValues : [];
+      eventType = state.eventType || "";
+      if (Array.isArray(state.stepsOptions3)) steps[2].options = state.stepsOptions3;
+    }
+
+    // UI 갱신
+    updateLegend(); updateCurrentInputLine(); updateStepProgress();
+  }catch(e){
+    console.warn("자동복구 실패:", e);
+  }
+}
+function clearAllStorage(){
+  Object.values(LS_KEYS).forEach(k => localStorage.removeItem(k));
+}
+
+/* ====== 유틸 ====== */
+function stripBrackets(str) { return str ? str.replace(/\[|\]/g, '') : ''; }
 
 function buildContextFrom(vals){
   const ctx = { event: vals[3] || "-", dir1: vals[4] || "-", dir2: vals[5] || "-", type: "-", detail: "-", result: "-" };
@@ -286,8 +363,8 @@ function buildContextFrom(vals){
     ctx.type   = vals[7] || "-";
     ctx.result = vals[8] || "-";
   } else if (ctx.event === "[주루 이벤트]") {
-    ctx.type   = vals[6] || "-";  // [도루] / [진루] / ...
-    ctx.result = vals[7] || "-";  // 예: [2루 도루 (2구 이내)]
+    ctx.type   = vals[6] || "-";
+    ctx.result = vals[7] || "-";
   }
   return ctx;
 }
@@ -307,9 +384,7 @@ function getCodeAndScore(vals) {
   const ctx = buildContextFrom(vals);
   const RULES = window.CODE_RULES || [];
   for (const r of RULES) {
-    if (ruleMatches(ctx, r)) {
-      return { code: r.code, score: r.score };
-    }
+    if (ruleMatches(ctx, r)) return { code: r.code, score: r.score };
   }
   return { code: "", score: "" };
 }
@@ -340,14 +415,13 @@ function buildRecord(vals) {
     if (r === "선행주자 아웃" || r === "출루" || r.includes("출루")) return `${posPrefix}땅볼 (타점)`.trim();
     return `${posPrefix}땅볼 (타점)`.trim();
   }
-  // 삼진 + 출루 → 낫아웃 출루
   if (ev === "삼진/사사구/기타 이벤트" && det === "삼진" && res.includes("출루")) {
     return "삼진 (낫아웃 출루)";
   }
 
   // 일반 규칙
   if (ev === "주루 이벤트") {
-    return stripBrackets(vals[7]) || "-";  // 예: "2루 도루 (2구 이내)"
+    return stripBrackets(vals[7]) || "-";
   }
 
   if (ev === "타격 이벤트") {
@@ -371,18 +445,24 @@ function buildRecord(vals) {
   return "-";
 }
 
-/* ====== 초기 UI 구성 ====== */
+/* ====== 초기 UI 구성 & 복구 ====== */
 window.onload = () => {
   const starterDiv = document.getElementById("starterInputs");
-  for (let i = 0; i < 9; i++) {
-    starterDiv.innerHTML += `<input id="starter${i}" placeholder="${i+1}번">`;
-  }
+  for (let i = 0; i < 9; i++) starterDiv.innerHTML += `<input id="starter${i}" placeholder="${i+1}번">`;
   const benchDiv = document.getElementById("benchInputs");
-  for (let i = 0; i < 5; i++) {
-    benchDiv.innerHTML += `<input id="bench${i}" placeholder="${benchKeys[i]}">`;
-  }
+  for (let i = 0; i < 5; i++) benchDiv.innerHTML += `<input id="bench${i}" placeholder="${benchKeys[i]}">`;
+
   setSelectAllBehavior();
+  bindResetAll();
+
+  // 복구 시도
+  loadAll();
 };
+
+function clearLineupInputs(){
+  for (let i = 0; i < 9; i++) { const el = document.getElementById(`starter${i}`); if (el) el.value = ""; }
+  for (let i = 0; i < 5; i++) { const el = document.getElementById(`bench${i}`);   if (el) el.value = ""; }
+}
 
 function applyLineup() {
   const starters = starterKeys.map((k, i) => document.getElementById("starter"+i).value).filter(Boolean);
@@ -408,6 +488,7 @@ function applyLineup() {
   document.getElementById("lineupInput").style.display = "none";
 
   renderLineupSummary();
+  scheduleSave();
 }
 
 /* ====== UI 갱신 ====== */
@@ -472,6 +553,7 @@ document.addEventListener("keydown", (e) => {
     currentValues = [];
     eventType = "";
     updateLegend(); updateCurrentInputLine(); updateStepProgress();
+    scheduleSave();
     return;
   }
 
@@ -485,6 +567,7 @@ document.addEventListener("keydown", (e) => {
       currentValues.push(lineupMap[k]);
       currentStep++;
       updateLegend(); updateCurrentInputLine(); updateStepProgress();
+      scheduleSave();
       return;
     }
   }
@@ -497,6 +580,7 @@ document.addEventListener("keydown", (e) => {
       currentValues.push(match.label);
       currentStep++;
       updateLegend(); updateCurrentInputLine(); updateStepProgress();
+      scheduleSave();
       return;
     }
   }
@@ -547,6 +631,7 @@ document.addEventListener("keydown", (e) => {
     }
 
     updateLegend(); updateCurrentInputLine(); updateStepProgress();
+    scheduleSave();
     return;
   }
 
@@ -573,6 +658,7 @@ document.addEventListener("keydown", (e) => {
     }
     currentStep = 8;
     updateLegend(); updateCurrentInputLine(); updateStepProgress();
+    scheduleSave();
     return;
   }
 
@@ -583,7 +669,7 @@ document.addEventListener("keydown", (e) => {
       currentValues.push(match.label);
       currentStep++;
       if (currentStep === 9) writeRowAndReset();
-      else { updateLegend(); updateCurrentInputLine(); updateStepProgress(); }
+      else { updateLegend(); updateCurrentInputLine(); updateStepProgress(); scheduleSave(); }
       return;
     }
   }
@@ -623,6 +709,7 @@ document.addEventListener("keydown", (e) => {
     steps[7].options = types;
     currentStep++;
     updateLegend(); updateCurrentInputLine(); updateStepProgress();
+    scheduleSave();
     return;
   }
 
@@ -644,6 +731,7 @@ document.addEventListener("keydown", (e) => {
       }
 
       updateLegend(); updateCurrentInputLine(); updateStepProgress();
+      scheduleSave();
     }
   }
 
@@ -653,6 +741,7 @@ document.addEventListener("keydown", (e) => {
       currentStep--;
       currentValues.pop();
       updateLegend(); updateCurrentInputLine(); updateStepProgress();
+      scheduleSave();
     }
     e.preventDefault();
   }
@@ -675,33 +764,65 @@ function writeRowAndReset() {
   const tbody = document.getElementById("logTable").getElementsByTagName("tbody")[0];
   const row = tbody.insertRow(0);
 
-  // 선택 체크박스
   const cbCell = row.insertCell(0);
   cbCell.innerHTML = '<input type="checkbox" class="rowSel">';
 
-  // 고유번호
   row.insertCell(1).innerText = (++logSeq);
 
-  // 이닝~결과
   for (let i = 0; i < steps.length; i++) {
     row.insertCell(i + 2).innerText = currentValues[i] || "-";
   }
 
-  // 자연어 기록
   row.insertCell(steps.length + 2).innerText = buildRecord(currentValues);
 
-  // 코드, 점수
   row.insertCell(steps.length + 3).innerText = code || "-";
   row.insertCell(steps.length + 4).innerText = (score !== "" ? score : "-");
 
-  // reset
   currentStep = 0;
   currentValues = [];
   eventType = "";
   updateLegend(); updateCurrentInputLine(); updateStepProgress();
+
+  scheduleSave();
 }
 
-/* ====== 삭제/선택/CSV ====== */
+/* ====== 테이블 직렬화/복구 ====== */
+function serializeTable(){
+  const tbody = document.querySelector("#logTable tbody");
+  const rows = [];
+  Array.from(tbody.rows).forEach(tr => {
+    const cells = Array.from(tr.cells).map(td => td.textContent);
+    // cells[0] = 체크박스 컬럼(텍스트 공백). 저장은 실제 표시값만 사용.
+    rows.push({
+      // 번호
+      seq: cells[1],
+      // 입력 단계들(이닝~결과)
+      values: cells.slice(2, 2 + steps.length),
+      // 기록/코드/점수
+      record: cells[2 + steps.length],
+      code:   cells[3 + steps.length],
+      score:  cells[4 + steps.length]
+    });
+  });
+  return rows;
+}
+function renderTableFrom(rows){
+  const tbody = document.querySelector("#logTable tbody");
+  tbody.innerHTML = "";
+  (rows || []).forEach(r => {
+    const tr = tbody.insertRow(-1);
+    tr.insertCell(0).innerHTML = '<input type="checkbox" class="rowSel">';
+    tr.insertCell(1).innerText = r.seq || "";
+    // 이닝~결과
+    (r.values || []).forEach(v => tr.insertCell(-1).innerText = v || "-");
+    // 기록/코드/점수
+    tr.insertCell(-1).innerText = r.record || "";
+    tr.insertCell(-1).innerText = r.code   || "-";
+    tr.insertCell(-1).innerText = (r.score !== undefined && r.score !== null) ? r.score : "-";
+  });
+}
+
+/* ====== 삭제/선택/CSV/초기화 ====== */
 function deleteSelectedRows() {
   const tbody = document.getElementById("logTable").getElementsByTagName("tbody")[0];
   const checked = Array.from(tbody.querySelectorAll('input.rowSel:checked'));
@@ -712,6 +833,7 @@ function deleteSelectedRows() {
   });
   const selectAll = document.getElementById('selectAll');
   if (selectAll) selectAll.checked = false;
+  scheduleSave();
 }
 
 function csvEscape(value) {
@@ -774,6 +896,43 @@ function setSelectAllBehavior() {
   const exportBtn = document.getElementById('exportCsv');
   if (exportBtn) exportBtn.addEventListener('click', downloadCSV);
 }
+function bindResetAll(){
+  const btn = document.getElementById("resetAll");
+  btn.addEventListener("click", () => {
+    const ok = confirm("정말 전체 초기화할까요? (라인업/진행상태/로그, 저장데이터 모두 삭제)");
+    if (!ok) return;
+
+    // DOM 초기화
+    document.querySelector("#logTable tbody").innerHTML = "";
+    logSeq = 0;
+
+    lineupMap = {};
+    lineupApplied = false;
+    currentStep = 0;
+    currentValues = [];
+    eventType = "";
+
+    // 라인업 입력 영역 다시 보이기 + 요약 숨김
+    document.getElementById("lineupInput").style.display = "block";
+    document.getElementById('starterList').innerHTML = "";
+    document.getElementById('benchList').innerHTML = "";
+    document.getElementById('lineupSummary').style.display = "none";
+    clearLineupInputs();
+
+    // 선수 선택 옵션 제거
+    steps[2].options = [];
+
+    updateLegend(); updateCurrentInputLine(); updateStepProgress();
+
+    // 저장 데이터 삭제
+    clearAllStorage();
+  });
+}
+
+/* ====== 종료 시 한 번 더 저장 ====== */
+window.addEventListener("beforeunload", () => {
+  try { saveAll(); } catch(e) {}
+});
 </script>
 </body>
 </html>
