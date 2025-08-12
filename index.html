@@ -343,7 +343,7 @@ function buildRecord(vals) {
 
   // 일반 규칙
   if (ev === "주루 이벤트") {
-    return stripBrackets(vals[8]) || "-";  // 예: "2루 도루 (2구 이내)"
+    return stripBrackets(vals[7]) || "-";  // 예: "2루 도루 (2구 이내)"
   }
 
   if (ev === "타격 이벤트") {
@@ -514,7 +514,7 @@ document.addEventListener("keydown", (e) => {
       currentStep = 7;
 
     } else if (selected === "[주루 이벤트]") {
-      currentValues.push("-", "-", "-");
+      currentValues.push("-", "-");
       steps[6].options = ["[도루]", "[진루]", "[아웃]", "[진루 기회 놓침]", "[주루 작전]"];
       currentStep = 6;
 
