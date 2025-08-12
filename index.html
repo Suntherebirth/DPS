@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-  <title>이글스 성과평가 단축키 입력 시스템 v2.3 (두 패널 + 자연어 기록)</title>
+  <title>이글스 성과평가 단축키 입력 시스템 v3.0</title>
   <style>
     body { font-family: sans-serif; margin: 30px; }
     h1 { margin-bottom: 10px; }
@@ -32,11 +32,14 @@
     /* 상단 레이아웃: 왼쪽 legend, 오른쪽 라인업 전체 박스 */
     .topRow { display: flex; align-items: flex-start; gap: 16px; }
 
+    /* 선택지 박스: v3.0에서 살짝 더 짙게 */
     #legendBox {
       flex: 0 0 300px; max-width: 300px;
       margin: 15px 0 8px 0; padding: 10px 15px;
-      border: 1px solid #ddd; background-color: #f9f9f9;
+      border: 1px solid #cfd8e3; background-color: #e9eef5; /* 기존 #f9f9f9 → 살짝 진하게 */
+      border-radius: 6px;
     }
+    #legendBox strong { display:block; margin-bottom:4px; }
     #legendBox ul { list-style: none; padding-left: 0; margin: 6px 0 0; }
     #legendBox li { margin: 4px 0; }
     .red { color: red; font-weight: bold; }
@@ -66,7 +69,7 @@
   </style>
 </head>
 <body>
-  <h1>이글스 성과평가 단축키 입력 시스템 <span style="font-size: 0.7em; color: #888;">v2.3</span></h1>
+  <h1>이글스 성과평가 단축키 입력 시스템 <span style="font-size: 0.7em; color: #888;">v3.0</span></h1>
 
   <!-- 라인업 입력 -->
   <div class="lineup-input" id="lineupInput">
@@ -127,7 +130,7 @@
           <th>성격</th>
           <th>종류</th>
           <th>결과</th>
-          <th>기록</th> <!-- 자연어 기록 -->
+          <th>기록</th>
           <th>코드</th>
           <th>점수</th>
         </tr>
@@ -270,14 +273,7 @@ function stripBrackets(str) {
 }
 
 function buildContextFrom(vals){
-  const ctx = {
-    event:  vals[3] || "-",
-    dir1:   vals[4] || "-",
-    dir2:   vals[5] || "-",
-    type:   "-",
-    detail: "-",
-    result: "-"
-  };
+  const ctx = { event: vals[3] || "-", dir1: vals[4] || "-", dir2: vals[5] || "-", type: "-", detail: "-", result: "-" };
   if (ctx.event === "[타격 이벤트]") {
     ctx.type   = vals[6] || "-";
     ctx.detail = vals[7] || "-";
@@ -286,11 +282,12 @@ function buildContextFrom(vals){
     ctx.type   = vals[7] || "-";
     ctx.result = vals[8] || "-";
   } else if (ctx.event === "[주루 이벤트]") {
-    ctx.type   = vals[7] || "-";
-    ctx.result = vals[8] || "-";
+    ctx.type   = vals[6] || "-";  // [도루] / [진루] / ...
+    ctx.result = vals[7] || "-";  // 예: [2루 도루 (2구 이내)]
   }
   return ctx;
 }
+
 function ruleMatches(ctx, rule){
   const w = rule.when || {};
   if (w.event  && w.event  !== ctx.event)  return false;
@@ -301,60 +298,72 @@ function ruleMatches(ctx, rule){
   if (w.result && w.result !== ctx.result) return false;
   return true;
 }
-function getCodeAndScore(vals){
+
+function getCodeAndScore(vals) {
   const ctx = buildContextFrom(vals);
   const RULES = window.CODE_RULES || [];
-  for (const r of RULES){
-    if (ruleMatches(ctx, r)) return { code: r.code, score: r.score };
+  for (const r of RULES) {
+    if (ruleMatches(ctx, r)) {
+      return { code: r.code, score: r.score };
+    }
   }
   return { code: "", score: "" };
 }
 
-// 자연어 기록 생성
 function buildRecord(vals) {
-  const ev   = stripBrackets(vals[3]); // 이벤트
-  const dir1 = stripBrackets(vals[4]); // 방향1
-  const dir2 = stripBrackets(vals[5]); // 방향2
-  const type = stripBrackets(vals[6]); // 성격
-  const det  = stripBrackets(vals[7]); // 종류
-  const res  = stripBrackets(vals[8]); // 결과
-
+  const ev   = stripBrackets(vals[3]);
+  const dir1 = stripBrackets(vals[4]);
+  const dir2 = stripBrackets(vals[5]);
+  const type = stripBrackets(vals[6]);
+  const det  = stripBrackets(vals[7]);
+  const res  = stripBrackets(vals[8]);
   const head = [dir1, (dir2 && dir2 !== "-") ? dir2 : ""].filter(Boolean).join(" ");
+  const posPrefix = dir1 ? (dir1 + " ") : "";
+
+  // 특수 규칙
+  if (ev === "타격 이벤트" && det === "땅볼" && stripBrackets(vals[8]) === "선행주자 아웃") {
+    return `${posPrefix}땅볼로 선행주자 아웃`.trim();
+  }
+  if (ev === "타격 이벤트" && type === "병살타성" && det === "땅볼" && stripBrackets(vals[8]) === "더블 아웃") {
+    return `${posPrefix}땅볼로 병살 아웃`.trim();
+  }
+  if (ev === "타격 이벤트" && type === "희생타/타점성" && det === "뜬공") {
+    return `${posPrefix}희생 플라이`.trim();
+  }
+  if (ev === "타격 이벤트" && type === "희생타/타점성" && det === "땅볼") {
+    const r = stripBrackets(vals[8]) || "";
+    if (r === "타자 아웃") return `${posPrefix}땅볼 아웃 (타점)`.trim();
+    if (r === "선행주자 아웃" || r === "출루" || r.includes("출루")) return `${posPrefix}땅볼 (타점)`.trim();
+    return `${posPrefix}땅볼 (타점)`.trim();
+  }
+  // 삼진 + 출루 → 낫아웃 출루
+  if (ev === "삼진/사사구/기타 이벤트" && det === "삼진" && res.includes("출루")) {
+    return "삼진 (낫아웃 출루)";
+  }
+
+  // 일반 규칙
+  if (ev === "주루 이벤트") {
+    return stripBrackets(vals[8]) || "-";  // 예: "2루 도루 (2구 이내)"
+  }
 
   if (ev === "타격 이벤트") {
     if (type === "홈런성") return head ? `${head} 홈런` : "홈런";
-
-    if (res.includes("출루") && type === "아웃성") {
+    if ((res && res.includes("출루")) && type === "아웃성") {
       const kind = (det === "뜬공" ? "플라이" : det);
       return head ? `${head} ${kind} 실책으로 출루` : `${kind} 실책으로 출루`;
     }
-
-    if (res.includes("출루")) {
-      const mapType = {
-        "1루타성": "1루타",
-        "2루타성": "2루타",
-        "3루타성": "3루타",
-        "내야안타성": "내야안타",
-        "텍사스히트성": "텍사스히트"
-      };
+    if (res && res.includes("출루")) {
+      const mapType = { "1루타성":"1루타", "2루타성":"2루타", "3루타성":"3루타", "내야안타성":"내야안타", "텍사스히트성":"텍사스히트" };
       const t = mapType[type] || type;
       return head ? `${head} ${t}` : t;
     }
-
-    if (res.includes("아웃")) {
+    if (res === "타자 아웃" || res === "더블 아웃") {
       const kind = (det === "뜬공" ? "플라이" : det);
-      return head ? `${head} ${kind} 아웃` : `${kind} 아웃`;
+      return head ? `${head} ${kind} ${res === "더블 아웃" ? "더블 아웃" : "아웃"}` : `${kind} ${res === "더블 아웃" ? "더블 아웃" : "아웃"}`;
     }
   }
 
-  if (ev === "주루 이벤트") {
-    return det || "-";
-  }
-
-  if (ev === "삼진/사사구/기타 이벤트") {
-    return det || "-";
-  }
-
+  if (ev === "삼진/사사구/기타 이벤트") return det || "-";
   return "-";
 }
 
@@ -680,8 +689,6 @@ function writeRowAndReset() {
   // 코드, 점수
   row.insertCell(steps.length + 3).innerText = code || "-";
   row.insertCell(steps.length + 4).innerText = (score !== "" ? score : "-");
-
-
 
   // reset
   currentStep = 0;
