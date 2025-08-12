@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-  <title>이글스 성과평가 단축키 입력 시스템 v3.1</title>
+  <title>이글스 성과평가 단축키 입력 시스템 v3.4</title>
   <style>
     body { font-family: sans-serif; margin: 30px; }
     h1 { margin-bottom: 10px; }
@@ -31,7 +31,6 @@
 
     .topRow { display: flex; align-items: flex-start; gap: 16px; }
 
-    /* 선택지 박스: v3.0보다 살짝 더 짙게 */
     #legendBox {
       flex: 0 0 300px; max-width: 300px;
       margin: 15px 0 8px 0; padding: 10px 15px;
@@ -64,7 +63,6 @@
     .key { width: 28px; display: inline-block; color: #888; }
     #starterList > div, #benchList > div { border-bottom: 1px dashed #eee; padding: 2px 0; }
 
-    /* 위험 버튼 스타일 약간 */
     .btn-danger { background:#dc3545; color:#fff; border:none; padding:6px 10px; cursor:pointer; }
     .btn { background:#eee; border:1px solid #ccc; padding:6px 10px; cursor:pointer; }
   </style>
@@ -72,7 +70,7 @@
 <body>
   <h1>
     <img src="EG LOGO.png" alt="이글스 로고" style="width:50px;height:50px;vertical-align:middle;margin-right:8px;">
-    이글스 성과평가 단축키 입력 시스템 <span style="font-size:.7em;color:#888;">v3.1</span>
+    이글스 성과평가 단축키 입력 시스템 <span style="font-size:.7em;color:#888;">v3.4</span>
   </h1>
 
   <!-- 라인업 입력 -->
@@ -177,41 +175,37 @@ window.CODE_RULES = [
   { code: "BR-STP-S", score: 1,  when: { event: "[주루 이벤트]", type: "[주루 작전]", result: "[주루 작전 성공]" } },
   { code: "STP",      score: 0,  when: { event: "[주루 이벤트]", type: "[주루 작전]", result: "[주루 작전 실패]" } },
 
-  { code: "B-G-O-1", score: -1, when: { event: "[타격 이벤트]", type: "[아웃성]", detail: "[땅볼]", result: "[타자 아웃]" } },
-  { code: "B-G-O-1", score: -1, when: { event: "[타격 이벤트]", type: "[아웃성]", detail: "[땅볼]", result: "[선행주자 아웃]" } },
-  { code: "B-G-O-1", score: -1, when: { event: "[타격 이벤트]", type: "[아웃성]", detail: "[땅볼]", result: "[더블 아웃]" } },
+  /* 타격 이벤트 - 땅볼(아웃성/안타성) */
+  { code: "B-G-O-1", score: -1, when: { event: "[타격 이벤트]", type: "[아웃성]",     detail: "[땅볼]", result: "[타자 아웃]" } },
+  { code: "B-G-O-1", score: -1, when: { event: "[타격 이벤트]", type: "[아웃성]",     detail: "[땅볼]", result: "[선행주자 아웃]" } },
 
-  { code: "B-G-O-2", score: 0, when: { event: "[타격 이벤트]", type: "[1루타성]", detail: "[땅볼]", result: "[타자 아웃]" } },
-  { code: "B-G-O-2", score: 0, when: { event: "[타격 이벤트]", type: "[1루타성]", detail: "[땅볼]", result: "[선행주자 아웃]" } },
-  { code: "B-G-O-2", score: 0, when: { event: "[타격 이벤트]", type: "[1루타성]", detail: "[땅볼]", result: "[더블 아웃]" } },
-  { code: "B-G-O-2", score: 0, when: { event: "[타격 이벤트]", type: "[내야안타성]", detail: "[땅볼]", result: "[타자 아웃]" } },
-  { code: "B-G-O-2", score: 0, when: { event: "[타격 이벤트]", type: "[내야안타성]", detail: "[땅볼]", result: "[선행주자 아웃]" } },
-  { code: "B-G-O-2", score: 0, when: { event: "[타격 이벤트]", type: "[내야안타성]", detail: "[땅볼]", result: "[더블 아웃]" } },
+  { code: "B-G-O-2", score: 0,  when: { event: "[타격 이벤트]", type: "[1루타성]",   detail: "[땅볼]", result: "[타자 아웃]" } },
+  { code: "B-G-O-2", score: 0,  when: { event: "[타격 이벤트]", type: "[1루타성]",   detail: "[땅볼]", result: "[선행주자 아웃]" } },
+  { code: "B-G-O-2", score: 0,  when: { event: "[타격 이벤트]", type: "[내야안타성]", detail: "[땅볼]", result: "[타자 아웃]" } },
+  { code: "B-G-O-2", score: 0,  when: { event: "[타격 이벤트]", type: "[내야안타성]", detail: "[땅볼]", result: "[선행주자 아웃]" } },
 
-  { code: "B-GD-O", score: -2, when: { event: "[타격 이벤트]", type: "[병살타성]", detail: "[땅볼]", result: "[더블 아웃]" } },
+  /* 병살타성 → 아웃성과 동일 처리(더블아웃 제외) */
+  { code: "B-G-S-1", score: 0.5, when: { event: "[타격 이벤트]", type: "[병살타성]", detail: "[땅볼]", result: "[출루]" } },
+  { code: "B-G-O-1", score: -1,  when: { event: "[타격 이벤트]", type: "[병살타성]", detail: "[땅볼]", result: "[타자 아웃]" } },
+  { code: "B-G-O-1", score: -1,  when: { event: "[타격 이벤트]", type: "[병살타성]", detail: "[땅볼]", result: "[선행주자 아웃]" } },
 
-  { code: "B-G-S-1", score: 0.5, when: { event: "[타격 이벤트]", type: "[아웃성]", detail: "[땅볼]", result: "[출루]" } },
+  /* 병살타성 더블 아웃 전용 */
+  { code: "B-GD-O",  score: -2,  when: { event: "[타격 이벤트]", type: "[병살타성]", detail: "[땅볼]", result: "[더블 아웃]" } },
+
+  /* 타격 이벤트 - 땅볼 출루(실책/내야안타 등) */
+  { code: "B-G-S-1", score: 0.5, when: { event: "[타격 이벤트]", type: "[아웃성]",     detail: "[땅볼]", result: "[출루]" } },
   { code: "B-G-S-1", score: 0.5, when: { event: "[타격 이벤트]", type: "[내야안타성]", detail: "[땅볼]", result: "[출루]" } },
 
-  { code: "B-G-S-2", score: 1, when: { event: "[타격 이벤트]", dir1: "[투수]", type: "[1루타성]", detail: "[땅볼]", result: "[출루]" } },
-  { code: "B-G-S-2", score: 1, when: { event: "[타격 이벤트]", dir1: "[포수]", type: "[1루타성]", detail: "[땅볼]", result: "[출루]" } },
-  { code: "B-G-S-2", score: 1, when: { event: "[타격 이벤트]", dir1: "[1루수]", type: "[1루타성]", detail: "[땅볼]", result: "[출루]" } },
-  { code: "B-G-S-2", score: 1, when: { event: "[타격 이벤트]", dir1: "[2루수]", type: "[1루타성]", detail: "[땅볼]", result: "[출루]" } },
-  { code: "B-G-S-2", score: 1, when: { event: "[타격 이벤트]", dir1: "[3루수]", type: "[1루타성]", detail: "[땅볼]", result: "[출루]" } },
-  { code: "B-G-S-2", score: 1, when: { event: "[타격 이벤트]", dir1: "[유격수]", type: "[1루타성]", detail: "[땅볼]", result: "[출루]" } },
+  /* 라인드라이브 */
+  { code: "B-L-O-1", score: -1, when: { event: "[타격 이벤트]", type: "[아웃성]",   detail: "[직선타]", result: "[타자 아웃]" } },
+  { code: "B-L-O-1", score: -1, when: { event: "[타격 이벤트]", type: "[아웃성]",   detail: "[직선타]", result: "[선행주자 아웃]" } },
 
-  { code: "B-G-SF", score: 0.5, when: { event: "[타격 이벤트]", type: "[희생타/타점성]", detail: "[땅볼]" } },
-
-  { code: "B-L-O-1", score: -1, when: { event: "[타격 이벤트]", type: "[아웃성]", detail: "[직선타]", result: "[타자 아웃]" } },
-  { code: "B-L-O-1", score: -1, when: { event: "[타격 이벤트]", type: "[아웃성]", detail: "[직선타]", result: "[선행주자 아웃]" } },
-  { code: "B-L-O-1", score: -1, when: { event: "[타격 이벤트]", type: "[아웃성]", detail: "[직선타]", result: "[더블 아웃]" } },
-
-  { code: "B-L-O-2", score: 0, when: { event: "[타격 이벤트]", type: "[1루타성]", detail: "[직선타]", result: "[타자 아웃]" } },
-  { code: "B-L-O-2", score: 0, when: { event: "[타격 이벤트]", type: "[1루타성]", detail: "[직선타]", result: "[선행주자 아웃]" } },
-  { code: "B-L-O-2", score: 0, when: { event: "[타격 이벤트]", type: "[1루타성]", detail: "[직선타]", result: "[더블 아웃]" } },
+  { code: "B-L-O-2", score: 0,  when: { event: "[타격 이벤트]", type: "[1루타성]", detail: "[직선타]", result: "[타자 아웃]" } },
+  { code: "B-L-O-2", score: 0,  when: { event: "[타격 이벤트]", type: "[1루타성]", detail: "[직선타]", result: "[선행주자 아웃]" } },
 
   { code: "B-L-S-1", score: 0.5, when: { event: "[타격 이벤트]", type: "[아웃성]", detail: "[직선타]", result: "[출루]" } },
 
+  /* 인필드 플라이 */
   { code: "B-IF-O", score: -1, when: { event: "[타격 이벤트]", type: "[아웃성]", dir1: "[투수]",   detail: "[뜬공]", result: "[타자 아웃]" } },
   { code: "B-IF-O", score: -1, when: { event: "[타격 이벤트]", type: "[아웃성]", dir1: "[포수]",   detail: "[뜬공]", result: "[타자 아웃]" } },
   { code: "B-IF-O", score: -1, when: { event: "[타격 이벤트]", type: "[아웃성]", dir1: "[1루수]",  detail: "[뜬공]", result: "[타자 아웃]" } },
@@ -228,6 +222,7 @@ window.CODE_RULES = [
 
   { code: "B-IF-S-2", score: 0.5, when: { event: "[타격 이벤트]", type: "[텍사스히트성]", detail: "[뜬공]", result: "[출루]" } },
 
+  /* 외야 */
   { code: "B-OF-SF", score: 0.5, when: { event: "[타격 이벤트]", type: "[희생타/타점성]", detail: "[뜬공]" } },
 
   { code: "B-OF-O", score: 0, when: { event: "[타격 이벤트]", dir1: "[좌익수]", type: "[아웃성]", detail: "[뜬공]" } },
@@ -275,7 +270,7 @@ let currentValues = [];
 let eventType = "";
 
 /* ====== 자동저장 설정 ====== */
-const LS_PREFIX = "eagles_v31_";
+const LS_PREFIX = "eagles_v33_";
 const LS_KEYS = {
   lineup: LS_PREFIX + "lineup",
   table : LS_PREFIX + "table",
@@ -286,22 +281,15 @@ let saveTimer = null;
 function scheduleSave(){ clearTimeout(saveTimer); saveTimer = setTimeout(saveAll, 250); }
 function saveAll(){
   try{
-    // 라인업
-    const lineupPayload = {
-      lineupMap, lineupApplied,
-      starterKeys, benchKeys
-    };
+    const lineupPayload = { lineupMap, lineupApplied, starterKeys, benchKeys };
     localStorage.setItem(LS_KEYS.lineup, JSON.stringify(lineupPayload));
 
-    // 테이블(로그)
     const tableData = serializeTable();
     localStorage.setItem(LS_KEYS.table, JSON.stringify({ logSeq, rows: tableData }));
 
-    // 진행 상태
     const statePayload = { currentStep, currentValues, eventType, stepsOptions3: steps[2].options };
     localStorage.setItem(LS_KEYS.state, JSON.stringify(statePayload));
 
-    // 메타(타임스탬프)
     localStorage.setItem(LS_KEYS.meta, JSON.stringify({ savedAt: Date.now() }));
   }catch(e){
     console.warn("자동저장 실패:", e);
@@ -313,26 +301,35 @@ function loadAll(){
     const table = JSON.parse(localStorage.getItem(LS_KEYS.table)  || "null");
     const state = JSON.parse(localStorage.getItem(LS_KEYS.state)  || "null");
 
-    // 라인업 복구
     if (line && line.lineupMap) {
       lineupMap = line.lineupMap || {};
       lineupApplied = !!line.lineupApplied;
-      renderLineupSummary();
-      // 선수 선택 옵션 복구
+
+      // 실제 이름이 하나라도 있지 않으면 적용상태 무시
+      const hasAnyName = Object.keys(lineupMap).some(k => (lineupMap[k] || "").trim().length > 0);
+      if (!hasAnyName) lineupApplied = false;
+
+      // 선수 선택 옵션 구성
       const playerOptions = [];
       starterKeys.forEach(k => { if (lineupMap[k]) playerOptions.push({ key: k, label: lineupMap[k] }); });
       benchKeys.forEach(k   => { if (lineupMap[k]) playerOptions.push({ key: k, label: lineupMap[k] }); });
       steps[2].options = playerOptions;
-      if (lineupApplied) document.getElementById("lineupInput").style.display = "none";
+
+      // 표시/숨김
+      document.getElementById("lineupInput").style.display = lineupApplied ? "none" : "block";
+      renderLineupSummary();
+    } else {
+      // 저장값 없음 → 입력폼 보이기
+      document.getElementById("lineupInput").style.display = "block";
+      lineupApplied = false;
+      renderLineupSummary();
     }
 
-    // 테이블 복구
     if (table && Array.isArray(table.rows)) {
       logSeq = table.logSeq || table.rows.length;
       renderTableFrom(table.rows);
     }
 
-    // 상태 복구
     if (state) {
       currentStep = state.currentStep || 0;
       currentValues = Array.isArray(state.currentValues) ? state.currentValues : [];
@@ -340,18 +337,44 @@ function loadAll(){
       if (Array.isArray(state.stepsOptions3)) steps[2].options = state.stepsOptions3;
     }
 
-    // UI 갱신
     updateLegend(); updateCurrentInputLine(); updateStepProgress();
   }catch(e){
     console.warn("자동복구 실패:", e);
+    // 실패 시 입력폼은 보이도록
+    document.getElementById("lineupInput").style.display = "block";
+    lineupApplied = false;
+    renderLineupSummary();
   }
 }
 function clearAllStorage(){
+  // v3.3 키 제거
   Object.values(LS_KEYS).forEach(k => localStorage.removeItem(k));
+  // 이전 버전 키(eagles_*) 전부 제거
+  try {
+    Object.keys(localStorage)
+      .filter(k => /^eagles_/.test(k))
+      .forEach(k => localStorage.removeItem(k));
+  } catch(e) { console.warn("레거시 키 제거 실패:", e); }
 }
 
 /* ====== 유틸 ====== */
 function stripBrackets(str) { return str ? str.replace(/\[|\]/g, '') : ''; }
+function isHitishType(t){
+  return t === "1루타성" || t === "2루타성" || t === "3루타성" || t === "내야안타성";
+}
+function recomputeResultOptionsForHit() {
+  const t = stripBrackets(currentValues[6]); // 성격
+  const d = stripBrackets(currentValues[7]); // 종류
+  const base = [
+    { key: "1", label: "[출루]",         color: "green" },
+    { key: "2", label: "[타자 아웃]",     color: "red"   },
+    { key: "3", label: "[선행주자 아웃]", color: "red"   }
+  ];
+  if (t === "병살타성" && d === "땅볼") {
+    base.push({ key: "4", label: "[더블 아웃]", color: "red" });
+  }
+  steps[8].options = base;
+}
 
 function buildContextFrom(vals){
   const ctx = { event: vals[3] || "-", dir1: vals[4] || "-", dir2: vals[5] || "-", type: "-", detail: "-", result: "-" };
@@ -400,22 +423,34 @@ function buildRecord(vals) {
   const posPrefix = dir1 ? (dir1 + " ") : "";
 
   // 특수 규칙
-  if (ev === "타격 이벤트" && det === "땅볼" && stripBrackets(vals[8]) === "선행주자 아웃") {
-    return `${posPrefix}땅볼로 선행주자 아웃`.trim();
+  // 1) 땅볼 + 선행주자 아웃 → 꼬리표
+  if (ev === "타격 이벤트" && det === "땅볼" && res === "선행주자 아웃") {
+    const suffix = hitLabel(type);
+    return `${posPrefix}땅볼로 선행주자 아웃${suffix}`.trim();
   }
-  if (ev === "타격 이벤트" && type === "병살타성" && det === "땅볼" && stripBrackets(vals[8]) === "더블 아웃") {
+
+  // 2) 병살타성 + 땅볼 + 더블 아웃
+  if (ev === "타격 이벤트" && type === "병살타성" && det === "땅볼" && res === "더블 아웃") {
     return `${posPrefix}땅볼로 병살 아웃`.trim();
   }
+
+  // 3) 뜬공/직선타 + 선행주자 아웃 → 꼬리표
+  if (ev === "타격 이벤트" && (det === "뜬공" || det === "직선타") && res === "선행주자 아웃") {
+    const kind = (det === "뜬공" ? "플라이" : "직선타");
+    const suffix = hitLabel(type);
+    return head ? `${head} ${kind}로 선행주자 아웃${suffix}` : `${kind}로 선행주자 아웃${suffix}`;
+  }
+
   if (ev === "타격 이벤트" && type === "희생타/타점성" && det === "뜬공") {
     return `${posPrefix}희생 플라이`.trim();
   }
   if (ev === "타격 이벤트" && type === "희생타/타점성" && det === "땅볼") {
-    const r = stripBrackets(vals[8]) || "";
+    const r = res || "";
     if (r === "타자 아웃") return `${posPrefix}땅볼 아웃 (타점)`.trim();
     if (r === "선행주자 아웃" || r === "출루" || r.includes("출루")) return `${posPrefix}땅볼 (타점)`.trim();
     return `${posPrefix}땅볼 (타점)`.trim();
   }
-  if (ev === "삼진/사사구/기타 이벤트" && det === "삼진" && res.includes("출루")) {
+  if (ev === "삼진/사사구/기타 이벤트" && type === "삼진" && (res || "").includes("출루")) {
     return "삼진 (낫아웃 출루)";
   }
 
@@ -426,23 +461,38 @@ function buildRecord(vals) {
 
   if (ev === "타격 이벤트") {
     if (type === "홈런성") return head ? `${head} 홈런` : "홈런";
-    if ((res && res.includes("출루")) && type === "아웃성") {
+
+    // 아웃성/병살타성 출루 → 실책으로 출루
+    if ((res && res.includes("출루")) && (type === "아웃성" || type === "병살타성")) {
       const kind = (det === "뜬공" ? "플라이" : det);
       return head ? `${head} ${kind} 실책으로 출루` : `${kind} 실책으로 출루`;
     }
+    // 일반 출루(안타류)
     if (res && res.includes("출루")) {
       const mapType = { "1루타성":"1루타", "2루타성":"2루타", "3루타성":"3루타", "내야안타성":"내야안타", "텍사스히트성":"텍사스히트" };
       const t = mapType[type] || type;
       return head ? `${head} ${t}` : t;
     }
+    // 아웃/더블 아웃 (+ 타자 아웃이면 꼬리표)
     if (res === "타자 아웃" || res === "더블 아웃") {
       const kind = (det === "뜬공" ? "플라이" : det);
-      return head ? `${head} ${kind} ${res === "더블 아웃" ? "더블 아웃" : "아웃"}` : `${kind} ${res === "더블 아웃" ? "더블 아웃" : "아웃"}`;
+      const base = head ? `${head} ${kind} ${res === "더블 아웃" ? "더블 아웃" : "아웃"}`
+                        : `${kind} ${res === "더블 아웃" ? "더블 아웃" : "아웃"}`;
+      const suffix = (res === "타자 아웃") ? hitLabel(type) : "";
+      return base + suffix;
     }
   }
 
   if (ev === "삼진/사사구/기타 이벤트") return det || "-";
   return "-";
+}
+
+// 꼬리표 판단: 1루타성/내야안타성=(안타성), 2루타성=(2루타성), 3루타성=(3루타성)
+function hitLabel(t){
+  if (t === "1루타성" || t === "내야안타성") return " (안타성)";
+  if (t === "2루타성") return " (2루타성)";
+  if (t === "3루타성") return " (3루타성)";
+  return "";
 }
 
 /* ====== 초기 UI 구성 & 복구 ====== */
@@ -485,9 +535,10 @@ function applyLineup() {
   updateLegend();
   updateCurrentInputLine();
   updateStepProgress();
-  document.getElementById("lineupInput").style.display = "none";
 
+  document.getElementById("lineupInput").style.display = "none";
   renderLineupSummary();
+
   scheduleSave();
 }
 
@@ -541,7 +592,9 @@ function renderLineupSummary() {
 
   document.getElementById('starterList').innerHTML = startersHtml;
   document.getElementById('benchList').innerHTML = benchHtml;
-  box.style.display = 'block';
+
+  // 적용 여부에 따라 표시
+  box.style.display = lineupApplied ? 'block' : 'none';
 }
 
 /* ====== 키 입력 ====== */
@@ -621,11 +674,11 @@ document.addEventListener("keydown", (e) => {
         { key: "8", label: "[희생타/타점성]", color: "green" }
       ];
       steps[7].options = ["[땅볼]", "[직선타]", "[뜬공]"];
+      // 기본 결과 옵션
       steps[8].options = [
         { key: "1", label: "[출루]",         color: "green" },
         { key: "2", label: "[타자 아웃]",     color: "red"   },
-        { key: "3", label: "[선행주자 아웃]", color: "red"   },
-        { key: "4", label: "[더블 아웃]",     color: "red"   }
+        { key: "3", label: "[선행주자 아웃]", color: "red"   }
       ];
       currentStep++;
     }
@@ -721,6 +774,11 @@ document.addEventListener("keydown", (e) => {
       currentValues.push(typeof val === "object" ? val.label : val);
       currentStep++;
 
+      // 타격 이벤트 7→8 진입 시 결과옵션 재계산 (더블아웃 노출 제한)
+      if (eventType === "[타격 이벤트]" && currentStep === 8) {
+        recomputeResultOptionsForHit();
+      }
+
       if (eventType === "[주루 이벤트]" && currentStep === 8) {
         writeRowAndReset();
         return;
@@ -792,13 +850,9 @@ function serializeTable(){
   const rows = [];
   Array.from(tbody.rows).forEach(tr => {
     const cells = Array.from(tr.cells).map(td => td.textContent);
-    // cells[0] = 체크박스 컬럼(텍스트 공백). 저장은 실제 표시값만 사용.
     rows.push({
-      // 번호
       seq: cells[1],
-      // 입력 단계들(이닝~결과)
       values: cells.slice(2, 2 + steps.length),
-      // 기록/코드/점수
       record: cells[2 + steps.length],
       code:   cells[3 + steps.length],
       score:  cells[4 + steps.length]
@@ -813,9 +867,7 @@ function renderTableFrom(rows){
     const tr = tbody.insertRow(-1);
     tr.insertCell(0).innerHTML = '<input type="checkbox" class="rowSel">';
     tr.insertCell(1).innerText = r.seq || "";
-    // 이닝~결과
     (r.values || []).forEach(v => tr.insertCell(-1).innerText = v || "-");
-    // 기록/코드/점수
     tr.insertCell(-1).innerText = r.record || "";
     tr.insertCell(-1).innerText = r.code   || "-";
     tr.insertCell(-1).innerText = (r.score !== undefined && r.score !== null) ? r.score : "-";
@@ -845,7 +897,7 @@ function tableToCSV() {
   const thead = table.tHead;
   const tbody = table.tBodies[0];
 
-  const headerCells = Array.from(thead.rows[0].cells).slice(1); // 체크박스 제외
+  const headerCells = Array.from(thead.rows[0].cells).slice(1);
   const headers = headerCells.map(th => csvEscape(th.textContent.trim()));
   const rows = [headers.join(",")];
 
@@ -902,7 +954,6 @@ function bindResetAll(){
     const ok = confirm("정말 전체 초기화할까요? (라인업/진행상태/로그, 저장데이터 모두 삭제)");
     if (!ok) return;
 
-    // DOM 초기화
     document.querySelector("#logTable tbody").innerHTML = "";
     logSeq = 0;
 
@@ -912,19 +963,17 @@ function bindResetAll(){
     currentValues = [];
     eventType = "";
 
-    // 라인업 입력 영역 다시 보이기 + 요약 숨김
+    // 표시/숨김 재설정
     document.getElementById("lineupInput").style.display = "block";
     document.getElementById('starterList').innerHTML = "";
     document.getElementById('benchList').innerHTML = "";
     document.getElementById('lineupSummary').style.display = "none";
     clearLineupInputs();
 
-    // 선수 선택 옵션 제거
     steps[2].options = [];
 
     updateLegend(); updateCurrentInputLine(); updateStepProgress();
 
-    // 저장 데이터 삭제
     clearAllStorage();
   });
 }
