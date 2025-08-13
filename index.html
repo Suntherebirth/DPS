@@ -67,7 +67,7 @@
     .btn-danger { background:#dc3545; color:#fff; border:none; padding:6px 10px; cursor:pointer; }
     .btn { background:#eee; border:1px solid #ccc; padding:6px 10px; cursor:pointer; }
 
-    /* --- 새로 추가: 축약 배지 & 이닝 태그 --- */
+    /* 축약 배지 & 이닝 태그 */
     .miniPlay{
       margin-left:6px; padding:1px 6px; border-radius:9999px;
       background:#eef2f7; color:#333; font-size:12px; font-weight:600;
@@ -91,7 +91,7 @@
     <div style="margin-top:6px;"><strong>대기 (q~t):</strong></div>
     <div id="benchInputs"></div>
     <div class="actions" style="margin-top:8px;">
-<button id="applyLineupBtn" type="button" class="btn">라인업 적용</button>
+      <button id="applyLineupBtn" type="button" class="btn">라인업 적용</button>
     </div>
   </div>
 
@@ -272,9 +272,10 @@ let currentStep = 0;
 let currentValues = [];
 let eventType = "";
 
-/* ====== 새 상태: 선수별 마지막 축약, 최근 이닝 ====== */
-let lastPlayMap = {};      // {선수명: "좌안" ...}
-let lastInning = "";       // "[5회]" 형태 저장
+/* ====== 새 상태: 선수별 ‘누적’ 축약, 최근 이닝 ====== */
+let playTrailMap = {};       // {선수명: ["투땅실","볼넷","좌플", ...]}
+const MAX_TRAIL = 6;
+let lastInning = "";         // "[5회]" 형태 저장
 
 /* ====== 자동저장 설정 ====== */
 const LS_PREFIX = "eagles_v33_";
@@ -329,7 +330,7 @@ function loadAll(){
 
     if (table && Array.isArray(table.rows)) {
       logSeq = table.logSeq || table.rows.length;
-      renderTableFrom(table.rows); // 여기서 lastPlayMap/lastInning 재계산됨
+      renderTableFrom(table.rows); // 여기서 playTrailMap/lastInning 재계산됨
     }
 
     if (state) {
@@ -378,7 +379,18 @@ function recomputeResultOptionsForHit() {
 /* ====== 축약 생성기 ====== */
 function makeShortPlay(vals){
   const ev   = stripBrackets(vals[3] || "");
-  if (ev !== "타격 이벤트") return ""; // 필요시 주루도 확장 가능
+
+  // 삼진/사사구/기타 이벤트 축약
+  if (ev === "삼진/사사구/기타 이벤트") {
+    const typ = stripBrackets(vals[7] || "");   // [삼진], [볼넷], [사구], [기타]
+    const res = stripBrackets(vals[8] || "");   // [출루]/[아웃]/[기타]
+    if (typ === "볼넷") return "볼넷";
+    if (typ === "사구") return "사구";
+    if (typ === "삼진") return res.includes("출루") ? "삼진출루" : "삼진";
+    return "";
+  }
+
+  if (ev !== "타격 이벤트") return ""; // (필요 시 주루 확장)
 
   const dir1 = stripBrackets(vals[4] || "");
   const dir2 = stripBrackets(vals[5] || "");
@@ -394,27 +406,25 @@ function makeShortPlay(vals){
   const d1 = D1[dir1] || "";
   const d2 = (dir2 in D2) ? D2[dir2] : "";
 
-  // --- 출루 케이스들 ---
+  // 출루 케이스
   if ((res || "").includes("출루")){
     if (type === "홈런성") return "홈런";
     if (type === "2루타성") return `${d1}${d2}2`;
     if (type === "3루타성") return `${d1}${d2}3`;
     if (["1루타성","내야안타성","텍사스히트성"].includes(type)) return `${d1}${d2}안`;
-
-    // ★ 아웃성/병살타성인데 실책 등으로 출루 → '투땅실', '유플실' 등
     if (type === "아웃성" || type === "병살타성") {
       const o = OUT[det] || "";
-      return `${d1}${d2}${o}실`;
+      return `${d1}${d2}${o}실`; // 예: 투땅실 / 유플실 / 좌직실
     }
   }
 
-  // --- 아웃 케이스들 ---
+  // 아웃 케이스
   if (res === "타자 아웃" || res === "더블 아웃" || res === "선행주자 아웃"){
     const o = OUT[det] || "";
-    return `${d1}${d2}${o}`;
+    return `${d1}${d2}${o}`; // 예: 좌플 / 유직 / 투땅
   }
 
-  // --- 희생 플라이 축약 ---
+  // 희생 플라이
   if (type === "희생타/타점성" && det === "뜬공") return `${d1}${d2}희플`;
 
   return "";
@@ -584,7 +594,8 @@ function renderLineupSummary() {
     .map(k => {
       if (!lineupMap[k]) return '';
       const name = lineupMap[k];
-      const mini = lastPlayMap[name] ? `<span class="miniPlay">${lastPlayMap[name]}</span>` : '';
+      const trail = (playTrailMap[name] || []).slice(-MAX_TRAIL).join(', ');
+      const mini = trail ? `<span class="miniPlay">${trail}</span>` : '';
       return `<div><span class="key">${k}</span> ${name} ${mini}</div>`;
     })
     .join('') || '<div>-</div>';
@@ -593,7 +604,8 @@ function renderLineupSummary() {
     .map(k => {
       if (!lineupMap[k]) return '';
       const name = lineupMap[k];
-      const mini = lastPlayMap[name] ? `<span class="miniPlay">${lastPlayMap[name]}</span>` : '';
+      const trail = (playTrailMap[name] || []).slice(-MAX_TRAIL).join(', ');
+      const mini = trail ? `<span class="miniPlay">${trail}</span>` : '';
       return `<div><span class="key">${k}</span> ${name} ${mini}</div>`;
     })
     .join('') || '<div>-</div>';
@@ -817,10 +829,13 @@ function writeRowAndReset() {
   row.insertCell(steps.length + 3).innerText = code || "-";
   row.insertCell(steps.length + 4).innerText = (score !== "" ? score : "-");
 
-  // ---- 새로 추가: 마지막 축약/최근 이닝 갱신 ----
+  // 축약 누적 & 최근 이닝 갱신
   const playerName = currentValues[2];
   const mini = makeShortPlay(currentValues);
-  if (playerName && mini){ lastPlayMap[playerName] = mini; }
+  if (playerName && mini){
+    if (!Array.isArray(playTrailMap[playerName])) playTrailMap[playerName] = [];
+    playTrailMap[playerName].push(mini);
+  }
   lastInning = currentValues[0] || lastInning;
   renderLineupSummary();
 
@@ -859,18 +874,20 @@ function renderTableFrom(rows){
     tr.insertCell(-1).innerText = (r.score !== undefined && r.score !== null) ? r.score : "-";
   });
 
-  // ---- 복구 시 최근 이닝/축약 재계산 (가장 최신 행을 마지막으로 본다) ----
-  lastPlayMap = {};
+  // 복구 시 최근 이닝/누적 축약 재계산 (오래된 → 최신 순으로 push)
+  playTrailMap = {};
   lastInning = "";
-  (rows || []).forEach(r => {
+  for (let i = (rows || []).length - 1; i >= 0; i--) {
+    const r = rows[i];
     const vals = r.values || [];
     const name = vals[2];
-    if (name && !lastPlayMap[name]) {
-      const mini = makeShortPlay(vals);
-      if (mini) lastPlayMap[name] = mini;
+    const mini = makeShortPlay(vals);
+    if (name && mini){
+      if (!Array.isArray(playTrailMap[name])) playTrailMap[name] = [];
+      playTrailMap[name].push(mini);
     }
-    if (!lastInning && vals[0]) lastInning = vals[0];
-  });
+    if (vals[0]) lastInning = vals[0];
+  }
   renderLineupSummary();
 }
 
@@ -886,19 +903,20 @@ function deleteSelectedRows() {
   const selectAll = document.getElementById('selectAll');
   if (selectAll) selectAll.checked = false;
 
-  // 삭제 후 축약/이닝 재계산
+  // 삭제 후 누적/이닝 재계산
   const rows = serializeTable();
-  lastPlayMap = {};
+  playTrailMap = {};
   lastInning = "";
-  rows.forEach(r => {
-    const vals = r.values || [];
-    const nm = vals[2];
-    if (nm && !lastPlayMap[nm]) {
-      const m = makeShortPlay(vals);
-      if (m) lastPlayMap[nm] = m;
+  for (let i = rows.length - 1; i >= 0; i--) {
+    const vals = rows[i].values || [];
+    const name = vals[2];
+    const mini = makeShortPlay(vals);
+    if (name && mini){
+      if (!Array.isArray(playTrailMap[name])) playTrailMap[name] = [];
+      playTrailMap[name].push(mini);
     }
-    if (!lastInning && vals[0]) lastInning = vals[0];
-  });
+    if (vals[0]) lastInning = vals[0];
+  }
   renderLineupSummary();
 
   scheduleSave();
@@ -969,7 +987,7 @@ function bindResetAll(){
     currentValues = [];
     eventType = "";
 
-    lastPlayMap = {};
+    playTrailMap = {};
     lastInning = "";
     updateInningTag();
 
@@ -1005,6 +1023,7 @@ function updateCurrentInputLine() {
   el.textContent = `[현재 입력 중] → ${picked}`;
 }
 
+// 선택지(전광판)
 function updateLegend() {
   const ul = document.getElementById('legendList');
   if (!ul) return;
@@ -1013,19 +1032,13 @@ function updateLegend() {
   const opts = step.options || [];
 
   const items = opts.map((o, idx) => {
-    // 객체 옵션({ key, label, color })인 경우: color 클래스 적용
     if (typeof o === 'object' && o.key && o.label) {
-      // red/green/yellow 중 하나면 그대로 클래스 사용, 아니면 기본값(녹색) 적용
       const color =
         o.color === 'red' || o.color === 'green' || o.color === 'yellow'
           ? o.color
           : 'green';
-
-      // 키 배지와 라벨 둘 다 색상 적용 (원하면 키만 색칠하도록 바꿔도 됨)
       return `<li><span class="${color}">[${o.key}]</span> <span class="${color}">${o.label}</span></li>`;
     }
-
-    // 문자열 옵션은 숫자키 1~9로 선택 — 키 배지 기본 녹색
     return `<li><span class="green">[${idx + 1}]</span> ${o}</li>`;
   });
 
