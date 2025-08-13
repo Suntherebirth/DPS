@@ -392,14 +392,31 @@ function recomputeResultOptionsForHit() {
 }
 
 /* ====== 축약 생성기 ====== */
-function makeShortPlay(vals){
-  const ev   = stripBrackets(vals[3] || "");
+ function makeShortPlay(vals){
+  // vals 인덱스: 0=이닝, 1=타순, 2=선수, 3=이벤트, 4=방향1, 5=방향2, 6=성격/타구성격, 7=종류/디테일, 8=결과
+  const ev = stripBrackets(vals[3] || "");
+
+  // ✅ 1) 삼진/사사구/기타 이벤트 축약
+  if (ev === "삼진/사사구/기타 이벤트") {
+    const t = stripBrackets(vals[7] || ""); // 종류: 삼진/볼넷/사구/기타
+    const r = stripBrackets(vals[8] || ""); // 결과: 출루/아웃/기타...
+
+    if (t === "삼진") return (r || "").includes("출루") ? "삼출" : "삼진";
+    if (t === "볼넷") return "볼넷";
+    if (t === "사구") return "사구";
+    return "기타";
+  }
+
+  // ✅ 2) 타격 이벤트 축약
+  if (ev !== "타격 이벤트") return ""; // (필요 시 주루 이벤트도 확장 가능)
+
   const dir1 = stripBrackets(vals[4] || "");
   const dir2 = stripBrackets(vals[5] || "");
   const type = stripBrackets(vals[6] || "");
   const det  = stripBrackets(vals[7] || "");
   const res  = stripBrackets(vals[8] || "");
 
+  // 수비 포지션/방향 축약 맵
   const D1 = { "좌익수":"좌", "중견수":"중", "우익수":"우",
                "유격수":"유", "3루수":"3", "2루수":"2", "1루수":"1", "투수":"투", "포수":"포" };
   const D2 = { "뒤":"월", "선상":"선", "옆":"측", "앞":"" };
@@ -408,41 +425,27 @@ function makeShortPlay(vals){
   const d1 = D1[dir1] || "";
   const d2 = (dir2 in D2) ? D2[dir2] : "";
 
-  // 삼진/사사구/기타 이벤트 축약
-  if (ev === "삼진/사사구/기타 이벤트") {
-    if (type === "삼진") {
-      if ((res || "").includes("출루")) return "삼출"; // 낫아웃 출루
-      return "삼진";
-    }
-    if (type === "볼넷") return "볼넷";
-    if (type === "사구") return "사구";
-    return "기타";
-  }
-
-  // 타격 이벤트
-  if (ev !== "타격 이벤트") return "";
-
-  // 출루 케이스
+  // --- 출루 케이스 ---
   if ((res || "").includes("출루")){
     if (type === "홈런성") return "홈런";
     if (type === "2루타성") return `${d1}${d2}2`;
     if (type === "3루타성") return `${d1}${d2}3`;
     if (["1루타성","내야안타성","텍사스히트성"].includes(type)) return `${d1}${d2}안`;
 
-    // 아웃성/병살타성인데 실책 등으로 출루 → '투땅실', '유플실', '직실'
+    // 아웃성/병살타성인데 실책 등으로 출루 → '투땅실', '유플실', '좌직실' 등
     if (type === "아웃성" || type === "병살타성") {
       const o = OUT[det] || "";
       return `${d1}${d2}${o}실`;
     }
   }
 
-  // 아웃 케이스
+  // --- 아웃 케이스(타자 아웃/더블 아웃/선행주자 아웃) ---
   if (res === "타자 아웃" || res === "더블 아웃" || res === "선행주자 아웃"){
     const o = OUT[det] || "";
     return `${d1}${d2}${o}`;
   }
 
-  // 희생 플라이 축약
+  // --- 희생 플라이 ---
   if (type === "희생타/타점성" && det === "뜬공") return `${d1}${d2}희플`;
 
   return "";
@@ -490,61 +493,90 @@ function hitLabel(t){
   if (t === "3루타성") return " (3루타성)";
   return "";
 }
+
 function buildRecord(vals) {
-  const ev   = stripBrackets(vals[3]);
-  const dir1 = stripBrackets(vals[4]);
-  const dir2 = stripBrackets(vals[5]);
-  const type = stripBrackets(vals[6]);
-  const det  = stripBrackets(vals[7]);
-  const res  = stripBrackets(vals[8]);
+  // vals 인덱스: 0=이닝, 1=타순, 2=선수, 3=이벤트, 4=방향1, 5=방향2, 6=성격/타구성격, 7=종류/디테일, 8=결과
+  const ev   = stripBrackets(vals[3] || "");
+  const dir1 = stripBrackets(vals[4] || "");
+  const dir2 = stripBrackets(vals[5] || "");
+  const type = stripBrackets(vals[6] || "");
+  const det  = stripBrackets(vals[7] || "");
+  const res  = stripBrackets(vals[8] || "");
+
   const head = [dir1, (dir2 && dir2 !== "-") ? dir2 : ""].filter(Boolean).join(" ");
   const posPrefix = dir1 ? (dir1 + " ") : "";
 
-  if (ev === "타격 이벤트" && det === "땅볼" && res === "선행주자 아웃") {
+  // ✅ 1) 삼진/사사구/기타 이벤트 자연어
+  if (ev === "삼진/사사구/기타 이벤트") {
+    const t = stripBrackets(vals[7] || "");
+    const r = stripBrackets(vals[8] || "");
+    if (t === "삼진") return (r || "").includes("출루") ? "삼진 (낫아웃 출루)" : "삼진";
+    if (t === "볼넷") return "볼넷";
+    if (t === "사구") return "사구";
+    return "기타";
+  }
+
+  // ✅ 2) 주루 이벤트
+  if (ev === "주루 이벤트") {
+    // 기존 구조가 6:주루카테고리, 7:세부유형, 8:결과(혹은 그대로)라면,
+    // 기록은 7 또는 8 중 의미 있는 값을 노출
+    return stripBrackets(vals[7]) || stripBrackets(vals[8]) || "-";
+  }
+
+  // ✅ 3) 타격 이벤트
+  const hitLabel = (t) => {
+    if (t === "1루타성" || t === "내야안타성") return " (안타성)";
+    if (t === "2루타성") return " (2루타성)";
+    if (t === "3루타성") return " (3루타성)";
+    return "";
+  };
+
+  // 선행주자 아웃 특수 문구
+  if (det === "땅볼" && res === "선행주자 아웃") {
     return `${posPrefix}땅볼로 선행주자 아웃`.trim();
   }
-  if (ev === "타격 이벤트" && type === "병살타성" && det === "땅볼" && res === "더블 아웃") {
+  if (type === "병살타성" && det === "땅볼" && res === "더블 아웃") {
     return `${posPrefix}땅볼로 병살 아웃`.trim();
   }
-  if (ev === "타격 이벤트" && (det === "뜬공" || det === "직선타") && res === "선행주자 아웃") {
+  if ((det === "뜬공" || det === "직선타") && res === "선행주자 아웃") {
     const kind = (det === "뜬공" ? "플라이" : "직선타");
     const suffix = hitLabel(type);
     return head ? `${head} ${kind}로 선행주자 아웃${suffix}` : `${kind}로 선행주자 아웃${suffix}`;
   }
-  if (ev === "타격 이벤트" && type === "희생타/타점성" && det === "뜬공") return `${posPrefix}희생 플라이`.trim();
-  if (ev === "타격 이벤트" && type === "희생타/타점성" && det === "땅볼") {
+
+  // 희생타/타점성
+  if (type === "희생타/타점성" && det === "뜬공") return `${posPrefix}희생 플라이`.trim();
+  if (type === "희생타/타점성" && det === "땅볼") {
     if (res === "타자 아웃") return `${posPrefix}땅볼 아웃 (타점)`.trim();
-    if (res === "선행주자 아웃" || res === "출루" || (res||"").includes("출루")) return `${posPrefix}땅볼 (타점)`.trim();
+    // 출루/선행주자 아웃이어도 타점이면 그냥 '땅볼 (타점)'
+    if (res === "선행주자 아웃" || res === "출루" || (res || "").includes("출루")) return `${posPrefix}땅볼 (타점)`.trim();
     return `${posPrefix}땅볼 (타점)`.trim();
   }
-  if (ev === "삼진/사사구/기타 이벤트" && type === "삼진" && (res || "").includes("출루")) return "삼진 (낫아웃 출루)";
 
-  if (ev === "주루 이벤트") return stripBrackets(vals[7]) || "-";
+  // 출루 케이스들
+  if (type === "홈런성") return head ? `${head} 홈런` : "홈런";
+  if ((res && res.includes("출루")) && (type === "아웃성" || type === "병살타성")) {
+    const kind = (det === "뜬공" ? "플라이" : det);
+    return head ? `${head} ${kind} 실책으로 출루` : `${kind} 실책으로 출루`;
+  }
+  if (res && res.includes("출루")) {
+    const mapType = {
+      "1루타성":"1루타", "2루타성":"2루타", "3루타성":"3루타",
+      "내야안타성":"내야안타", "텍사스히트성":"텍사스히트"
+    };
+    const t = mapType[type] || type;
+    return head ? `${head} ${t}` : t;
+  }
 
-  if (ev === "타격 이벤트") {
-    if (type === "홈런성") return head ? `${head} 홈런` : "홈런";
-    if ((res && res.includes("출루")) && (type === "아웃성" || type === "병살타성")) {
-      const kind = (det === "뜬공" ? "플라이" : det);
-      return head ? `${head} ${kind} 실책으로 출루` : `${kind} 실책으로 출루`;
-    }
-    if (res && res.includes("출루")) {
-      const mapType = { "1루타성":"1루타", "2루타성":"2루타", "3루타성":"3루타", "내야안타성":"내야안타", "텍사스히트성":"텍사스히트" };
-      const t = mapType[type] || type;
-      return head ? `${head} ${t}` : t;
-    }
-    if (res === "타자 아웃" || res === "더블 아웃") {
-      const kind = (det === "뜬공" ? "플라이" : det);
-      const base = head ? `${head} ${kind} ${res === "더블 아웃" ? "더블 아웃" : "아웃"}` : `${kind} ${res === "더블 아웃" ? "더블 아웃" : "아웃"}`;
-      const suffix = (res === "타자 아웃") ? hitLabel(type) : "";
-      return base + suffix;
-    }
+  // 아웃/더블아웃
+  if (res === "타자 아웃" || res === "더블 아웃") {
+    const kind = (det === "뜬공" ? "플라이" : det);
+    const base = head ? `${head} ${kind} ${res === "더블 아웃" ? "더블 아웃" : "아웃"}` : `${kind} ${res === "더블 아웃" ? "더블 아웃" : "아웃"}`;
+    const suffix = (res === "타자 아웃") ? hitLabel(type) : "";
+    return base + suffix;
   }
-  if (ev === "삼진/사사구/기타 이벤트") {
-    if (type === "삼진") return (res||"").includes("출루") ? "삼진 (낫아웃 출루)" : "삼진";
-    if (type === "볼넷") return "볼넷";
-    if (type === "사구") return "사구";
-    return "기타";
-  }
+
+  // 기본 폴백
   return "-";
 }
 
@@ -1070,12 +1102,8 @@ function updateLegend() {
       const color = (o.color === 'red' || o.color === 'green' || o.color === 'yellow') ? o.color : 'green';
       return `<li><span class="${color}">[${o.key}]</span> <span class="${color}">${o.label}</span></li>`;
     }
-    return `<li><span class="green">[${idx + 1}]</span> ${o}</li>`;
+    return `<li><span class="">[${idx + 1}]</span> ${o}</li>`;
   });
-
-  // 선수 선택 스텝 안내
-  if (currentStep === 2) items.unshift('<li><span class="green">[1~9, q~t]</span> 라인업 키로 선수 선택</li>');
-
   ul.innerHTML = items.join('') || '<li>-</li>';
 }
 
