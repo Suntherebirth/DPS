@@ -1036,7 +1036,7 @@ function downloadCSV() {
   const filename = (() => {
     const d = new Date();
     const pad = n => String(n).padStart(2, "0");
-    return `eagles_logs_${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}.csv`;
+    return `Eagles Offense Log ${scheduleName}.csv`;
   })();
 
   const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
