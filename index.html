@@ -1033,23 +1033,37 @@ function tableToCSV() {
 }
 function downloadCSV() {
   const csv = tableToCSV();
-  const filename = (() => {
-    const d = new Date();
-    const pad = n => String(n).padStart(2, "0");
-    return `Eagles Offense Log ${scheduleName}.csv`;
-  })();
+
+  // 일정명 값 읽기 (state 우선, 없으면 input.value)
+  const rawName =
+    (typeof scheduleNameState === "string" && scheduleNameState.trim()) ||
+    (document.getElementById("scheduleName")?.value?.trim()) ||
+    "일정없음";
+
+  // 파일명 금지문자 제거: \ / : * ? " < > |
+  const safeName = rawName.replace(/[\\\/:*?"<>|]/g, " ").replace(/\s+/g, " ").trim();
+
+  // 요구 포맷: [Eagles Offense Log ‘일정명’ ]
+  const filename = `[Eagles Offense Log ‘${safeName}’ ].csv`;
 
   const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
-  a.href = url; a.download = filename;
+  a.href = url;
+  a.download = filename;
+
   if (typeof a.download === "undefined") {
     const dataUrl = "data:text/csv;charset=utf-8,\uFEFF" + encodeURIComponent(csv);
-    window.open(dataUrl); return;
+    window.open(dataUrl);
+    return;
   }
-  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
   URL.revokeObjectURL(url);
 }
+
 function setSelectAllBehavior() {
   const selectAll = document.getElementById('selectAll');
   const tbody = document.getElementById("logTable").getElementsByTagName("tbody")[0];
