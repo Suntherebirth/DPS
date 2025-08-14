@@ -145,7 +145,7 @@
       <thead>
         <tr>
           <th><input type="checkbox" id="selectAll"></th>
-          <th>성과객체명</th>
+          <th>#</th>
           <th>이닝</th>
           <th>타순</th>
           <th>선수</th>
@@ -890,32 +890,41 @@ function pushPlayHistory(playerName, inning, shortTxt){
 /* ====== 로그 행 쓰기 & 리셋 ====== */
 function writeRowAndReset() {
   const { code, score } = getCodeAndScore(currentValues);
-
-  const tbody = document.getElementById("logTable").getElementsByTagName("tbody")[0];
+  const tbody = document.getElementById("logTable").tBodies[0];
   const row = tbody.insertRow(0);
 
-  // 성과객체명: 일정명 + 공백 + 일련번호
+  // 화면의 '#' 컬럼에는 순번만 표기
   const seqText = (++logSeq);
-  const perfObjectName = (scheduleNameState ? `${scheduleNameState} ${seqText}` : `${seqText}`);
-
   row.insertCell(0).innerHTML = '<input type="checkbox" class="rowSel">';
-  row.insertCell(1).innerText = perfObjectName;
-  for (let i = 0; i < steps.length; i++) row.insertCell(i + 2).innerText = currentValues[i] || "-";
+  row.insertCell(1).innerText = String(seqText);
+
+  // 스텝 값 채우기
+  for (let i = 0; i < steps.length; i++) {
+    row.insertCell(i + 2).innerText = currentValues[i] || "-";
+  }
+
+  // 기록, 코드, 점수
   row.insertCell(steps.length + 2).innerText = buildRecord(currentValues);
   row.insertCell(steps.length + 3).innerText = code || "-";
   row.insertCell(steps.length + 4).innerText = (score !== "" ? score : "-");
 
-  // 히스토리 누적 & 최근 이닝 갱신
+  // ── 히스토리/최근 이닝 갱신 ──
   const playerName = currentValues[2];
   const mini = makeShortPlay(currentValues);
   const inning = currentValues[0] || "";
-  if (playerName && mini){ pushPlayHistory(playerName, inning, mini); }
+  if (playerName && mini) pushPlayHistory(playerName, inning, mini);
   lastInning = inning || lastInning;
   renderLineupSummary();
 
-  // reset
-  currentStep = 0; currentValues = []; eventType = "";
-  updateLegend(); updateCurrentInputLine(); updateStepProgress();
+  // 입력 상태 리셋
+  currentStep = 0;
+  currentValues = [];
+  eventType = "";
+
+  // UI 반영 + 자동저장
+  updateLegend();
+  updateCurrentInputLine();
+  updateStepProgress();
   scheduleSave();
 }
 
@@ -996,20 +1005,30 @@ function tableToCSV() {
   const thead = table.tHead;
   const tbody = table.tBodies[0];
 
-  // 화면 헤더 기준으로 CSV 헤더 구성 + 마지막에 '일정명' 추가
-  const headerCells = Array.from(thead.rows[0].cells).slice(1); // 첫 체크박스 제외
+  // CSV 헤더
+  const headerCells = Array.from(thead.rows[0].cells).slice(1); // 체크박스 제외
   const headers = headerCells.map(th => th.textContent.trim());
-  headers.push("일정명");
+  if (headers.length > 0) headers[0] = "성과객체명"; // '#' → '성과객체명'
+  headers.push("일정명"); // 마지막에 일정명 컬럼 추가
 
   const rows = [headers.map(csvEscape).join(",")];
 
+  // CSV 내용
   Array.from(tbody.rows).forEach(tr => {
     const cells = Array.from(tr.cells).slice(1); // 체크박스 제외
     const vals = cells.map(td => td.textContent.trim());
-    // 끝에 일정명 추가(전체 동일)
+
+    // 첫 컬럼(#) → 일정명 + 순번
+    const seq = vals[0] || "";
+    const perfCsv = (scheduleNameState ? `${scheduleNameState} ${seq}` : seq);
+    vals[0] = perfCsv;
+
+    // 마지막에 일정명 값 추가
     vals.push(scheduleNameState || "");
+
     rows.push(vals.map(csvEscape).join(","));
   });
+
   return rows.join("\n");
 }
 function downloadCSV() {
