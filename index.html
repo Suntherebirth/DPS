@@ -273,6 +273,11 @@ window.CODE_RULES = [
   { code: "B-G-O-H", score: 0,   when: { event: "[타격 이벤트]", type: "[내야안타성]", detail: "[땅볼]", result: "[타자 아웃]" } },
   { code: "B-G-O-H", score: 0,   when: { event: "[타격 이벤트]", type: "[내야안타성]", detail: "[땅볼]", result: "[선행주자 아웃]" } },
 
+  { code: "B-G-SF", score: 0.5, when: { event:"[타격 이벤트]", dir1:"[1루수]", type:"[희생타/타점성]", detail:"[땅볼]" } },
+  { code: "B-G-SF", score: 0.5, when: { event:"[타격 이벤트]", dir1:"[2루수]", type:"[희생타/타점성]", detail:"[땅볼]" } },
+  { code: "B-G-SF", score: 0.5, when: { event:"[타격 이벤트]", dir1:"[3루수]", type:"[희생타/타점성]", detail:"[땅볼]" } },
+  { code: "B-G-SF", score: 0.5, when: { event:"[타격 이벤트]", dir1:"[유격수]", type:"[희생타/타점성]", detail:"[땅볼]" } },
+
   { code: "B-G-S",   score: 0.5, when: { event: "[타격 이벤트]", type: "[병살타성]", detail: "[땅볼]", result: "[출루]" } },
   { code: "B-G-O",   score: -1,  when: { event: "[타격 이벤트]", type: "[병살타성]", detail: "[땅볼]", result: "[타자 아웃]" } },
   { code: "B-G-O",   score: -1,  when: { event: "[타격 이벤트]", type: "[병살타성]", detail: "[땅볼]", result: "[선행주자 아웃]" } },
