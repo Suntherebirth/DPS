@@ -237,10 +237,10 @@
 <script>
 /* ============== 규칙 테이블(초기 자동 기입용) ============== */
 window.CODE_RULES = [
-  { code: "B-SO-O", score: -1.5, when: { event: "[삼진/사사구/기타 이벤트]", type: "[삼진]", result: "[아웃]" } },
-  { code: "B-SO-S", score: 0,    when: { event: "[삼진/사사구/기타 이벤트]", type: "[삼진]", result: "[출루]" } },
-  { code: "B-BB",   score: 1,    when: { event: "[삼진/사사구/기타 이벤트]", type: "[볼넷]", result: "[출루]" } },
-  { code: "B-BB",   score: 1,    when: { event: "[삼진/사사구/기타 이벤트]", type: "[사구]", result: "[출루]" } },
+  { code: "B-SO-O", score: -1.5, when: { event: "[삼진/사사구 이벤트]", type: "[삼진]", result: "[아웃]" } },
+  { code: "B-SO-S", score: 0,    when: { event: "[삼진/사사구 이벤트]", type: "[삼진]", result: "[출루]" } },
+  { code: "B-BB",   score: 1,    when: { event: "[삼진/사사구 이벤트]", type: "[볼넷]", result: "[출루]" } },
+  { code: "B-BB",   score: 1,    when: { event: "[삼진/사사구 이벤트]", type: "[사구]", result: "[출루]" } },
 
   { code: "BR-2ndQ", score: 1,   when: { event: "[주루 이벤트]", type: "[도루]", result: "[2루 도루 (2구 이내)]" } },
   { code: "BR-2nd",  score: 0.5, when: { event: "[주루 이벤트]", type: "[도루]", result: "[2루 도루 (3구 이상)]" } },
@@ -354,7 +354,7 @@ const steps = [
   { name: "이닝 선택",   options: ["[1회]", "[2회]", "[3회]", "[4회]", "[5회]", "[6회]", "[7회]", "[8회]", "[9회]"] },
   { name: "타순 선택",   options: ["[1번]", "[2번]", "[3번]", "[4번]", "[5번]", "[6번]", "[7번]", "[8번]", "[9번]"] },
   { name: "선수 선택",   options: [] },
-  { name: "이벤트 선택", options: ["[타격 이벤트]", "[삼진/사사구/기타 이벤트]", "[주루 이벤트]"] },
+  { name: "이벤트 선택", options: ["[타격 이벤트]", "[삼진/사사구 이벤트]", "[주루 이벤트]"] },
   { name: "타구 방향1",  options: ["[투수]", "[포수]", "[1루수]", "[2루수]", "[3루수]", "[유격수]", "[좌익수]", "[중견수]", "[우익수]"] },
   { name: "타구 방향2",  options: ["[앞]", "[뒤]", "[선상]", "[옆]"] },
   { name: "타구 성격",   options: [] },
@@ -455,7 +455,7 @@ function buildContextFrom(vals){
     ctx.type   = vals[6] || "-";
     ctx.detail = vals[7] || "-";
     ctx.result = vals[8] || "-";
-  } else if (ctx.event === "[삼진/사사구/기타 이벤트]") {
+  } else if (ctx.event === "[삼진/사사구 이벤트]") {
     ctx.type   = vals[7] || "-";
     ctx.result = vals[8] || "-";
   } else if (ctx.event === "[주루 이벤트]") {
@@ -497,7 +497,7 @@ function buildRecord(vals) {
   const head = [dir1, (dir2 && dir2 !== "-") ? dir2 : ""].filter(Boolean).join(" ");
   const posPrefix = dir1 ? (dir1 + " ") : "";
 
-  if (ev === "삼진/사사구/기타 이벤트") {
+  if (ev === "삼진/사사구 이벤트") {
     const t = stripBrackets(vals[7] || "");
     const r = stripBrackets(vals[8] || "");
     if (t === "삼진") return (r || "").includes("출루") ? "삼진 (낫아웃 출루)" : "삼진";
@@ -541,7 +541,7 @@ function buildRecord(vals) {
 /* ====== 히스토리(라인업 미니표시용) ====== */
 function makeShortPlay(vals){
   const ev = stripBrackets(vals[3] || "");
-  if (ev === "삼진/사사구/기타 이벤트") {
+  if (ev === "삼진/사사구 이벤트") {
     const t = stripBrackets(vals[7] || ""); const r = stripBrackets(vals[8] || "");
     if (t === "삼진") return (r || "").includes("출루") ? "삼출" : "삼진";
     if (t === "볼넷") return "볼넷";
@@ -599,7 +599,7 @@ function computeLiveScoresByPlayer(){
 
 /* ====== 타석 보정점수(공격) ======
  * 팀 평균 = (점수 합계) / (PA)
- * PA = 이벤트가 [타격 이벤트] 또는 [삼진/사사구/기타 이벤트] 인 행의 개수
+ * PA = 이벤트가 [타격 이벤트] 또는 [삼진/사사구 이벤트] 인 행의 개수
  * 표 컬럼 인덱스:
  *   0 chk, 1 #, 2 이닝, 3 타순, 4 선수, 5 이벤트, ..., 13 점수
  */
@@ -613,7 +613,7 @@ function computePlateAppearanceAvg_Offense(){
     const scoreStr = (tr.cells[13]?.textContent || '').trim();
     const score    = parseFloat(scoreStr);
 
-    if (eventTxt === "[타격 이벤트]" || eventTxt === "[삼진/사사구/기타 이벤트]") {
+    if (eventTxt === "[타격 이벤트]" || eventTxt === "[삼진/사사구 이벤트]") {
       pa += 1;
     }
     if (Number.isFinite(score)) total += score;
@@ -651,7 +651,7 @@ function renderAdjSummary(){
   // PA로 인정되는 이벤트만 카운트
   for (const tr of tbody.rows){
     const eventTxt = (tr.cells[5]?.textContent || '').trim();
-    if (!(eventTxt === "[타격 이벤트]" || eventTxt === "[삼진/사사구/기타 이벤트]")) continue;
+    if (!(eventTxt === "[타격 이벤트]" || eventTxt === "[삼진/사사구 이벤트]")) continue;
 
     const slotRaw = (tr.cells[3]?.textContent || '').trim(); // [1번] 형태
     const slot = stripBrackets(slotRaw).replace("번","").trim();
@@ -838,7 +838,7 @@ document.addEventListener("keydown", (e) => {
     currentValues.push(selected);
     eventType = selected;
 
-    if (selected === "[삼진/사사구/기타 이벤트]") {
+    if (selected === "[삼진/사사구 이벤트]") {
       currentValues.push("-", "-", "-");
       steps[7].options = [
         { key: "₩", label: "[삼진]", color: "red" },
@@ -881,8 +881,8 @@ document.addEventListener("keydown", (e) => {
     return;
   }
 
-  // 삼진/사사구/기타 - 종류
-  if (eventType === "[삼진/사사구/기타 이벤트]" && currentStep === 7) {
+  // 삼진/사사구 - 종류
+  if (eventType === "[삼진/사사구 이벤트]" && currentStep === 7) {
     const normalizedKey = (e.key === "\\" || e.key === "`") ? "₩" : e.key;
     const match = steps[7].options.find(o => o.key === normalizedKey);
     if (!match) return;
@@ -908,8 +908,8 @@ document.addEventListener("keydown", (e) => {
     return;
   }
 
-  // 삼진/사사구/기타 - 결과 후 종료
-  if (eventType === "[삼진/사사구/기타 이벤트]" && currentStep === 8) {
+  // 삼진/사사구 - 결과 후 종료
+  if (eventType === "[삼진/사사구 이벤트]" && currentStep === 8) {
     const normalizedKey = (e.key === "\\" || e.key === "`") ? "₩" : e.key;
     const match = steps[8].options.find(o => o.key === normalizedKey);
     if (match) {
