@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-  <title>이글스 성과평가 단축키 입력 시스템 v3.7 (편집 자유/무재계산)</title>
+  <title>이글스 성과평가 단축키 입력 시스템 v1.0 (공격)</title>
   <style>
     body { font-family: sans-serif; margin: 30px; }
     h1 { margin-bottom: 10px; }
@@ -51,7 +51,6 @@
     }
     #lineupSummary h3 { margin: 0 0 8px; }
 
-    /* 라인업 헤더 배지들 */
     .inningTag{
       margin-left:8px; padding:2px 8px; border-radius:9999px;
       background:#e8f0ff; color:#1a4fb3; font-size:12px; font-weight:700;
@@ -77,24 +76,27 @@
     .btn-danger { background:#dc3545; color:#fff; border:none; padding:6px 10px; cursor:pointer; }
     .btn { background:#eee; border:1px solid #ccc; padding:6px 10px; cursor:pointer; }
 
-    /* 축약 배지 & 이닝 태그 */
     .miniPlay{
       margin-left:6px; padding:1px 6px; border-radius:9999px;
       background:#eef2f7; color:#333; font-size:12px; font-weight:600;
     }
 
-    /* 상단 일정명 입력 */
     .schedRow{ display:flex; gap:8px; align-items:center; margin:6px 0 10px; }
     .schedRow input{ padding:6px 8px; border:1px solid #ccc; border-radius:4px;}
 
-    /* 편집 모드 시 셀 하이라이트 */
     .editing td.ed { outline: 2px dashed #93c5fd; background:#f3f8ff; }
+
+    /* 타석 보정점수 박스 */
+    #paAdjBox{ margin-top:10px; padding-top:8px; border-top:1px dashed #e5e7eb; }
+    #paAdjBody table{ width:100%; border-collapse:collapse; }
+    #paAdjBody td{ padding:4px 6px; font-size:12px; }
+    #paAdjBody td:last-child{ text-align:right; font-weight:700; }
   </style>
 </head>
 <body>
   <h1>
     <img src="EG LOGO.png" alt="이글스 로고" style="width:50px;height:50px;vertical-align:middle;margin-right:8px;">
-    이글스 성과평가 단축키 입력 시스템 <span style="font-size:.7em;color:#888;">v3.7</span>
+    이글스 성과평가 단축키 입력 시스템 <span style="font-size:.7em;color:#888;">v1.0</span>
   </h1>
 
   <!-- 라인업/일정명 입력 -->
@@ -123,7 +125,6 @@
     </div>
 
     <div id="lineupSummary">
-      <!-- 라인업 헤더: 제목 왼쪽 / 최근 이닝 & 일정명 배지 오른쪽 -->
       <div style="display:flex;align-items:center;justify-content:space-between;margin:0 0 8px;">
         <h3 style="margin:0;">라인업</h3>
         <div style="display:flex;align-items:center;">
@@ -140,6 +141,12 @@
         <div class="lineupPanel">
           <h4>교체 (q~t)</h4>
           <div id="benchList"></div>
+
+          <!-- ⬇️ 타석 보정점수 -->
+          <div id="paAdjBox">
+            <h4 style="margin:6px 0 4px;">타석 보정점수</h4>
+            <div id="paAdjBody" style="color:#6b7280; font-size:12px;">로그를 입력하면 자동 계산됩니다.</div>
+          </div>
         </div>
       </div>
     </div>
@@ -314,7 +321,7 @@ let currentStep = 0;
 let currentValues = [];
 let eventType = "";
 
-/* ====== 자동저장(조용히 저장; 표시 배지 없음) ====== */
+/* ====== 자동저장 ====== */
 const LS_PREFIX = "eagles_v37_";
 const LS_KEYS = { lineup: LS_PREFIX + "lineup", table : LS_PREFIX + "table", state : LS_PREFIX + "state" };
 let saveTimer = null;
@@ -369,6 +376,7 @@ function loadAll(){
     }
 
     updateLegend(); updateCurrentInputLine(); updateStepProgress(); updateInningTag();
+    renderPlateAppearanceAvg_Offense(); // 초기 렌더
   }catch(e){
     console.warn("자동복구 실패:", e);
   }
@@ -386,7 +394,7 @@ function isTypingInEditable(e){
   );
 }
 
-/* ====== 축약/코드/기록(초기 자동 기입용만 사용, 편집 시 절대 재계산 안 함) ====== */
+/* ====== 축약/코드/기록 ====== */
 function buildContextFrom(vals){
   const ctx = { event: vals[3] || "-", dir1: vals[4] || "-", dir2: vals[5] || "-", type: "-", detail: "-", result: "-" };
   if (ctx.event === "[타격 이벤트]") {
@@ -520,6 +528,44 @@ function pushPlayHistory(playerName, inning, shortTxt){
   playHistoryMap[playerName].push({ inning, short: shortTxt });
 }
 
+/* ====== 타석 보정점수(공격) ======
+ * 보정점수 = (점수 합계) / (타석수)
+ * 타석수 = 이벤트가 [타격 이벤트] 또는 [삼진/사사구/기타 이벤트] 인 행의 개수
+ * 표 컬럼 인덱스:
+ *   0 chk, 1 #, 2 이닝, 3 타순, 4 선수, 5 이벤트, ..., 13 점수
+ */
+function computePlateAppearanceAvg_Offense(){
+  const tbody = document.querySelector('#logTable tbody');
+  let pa = 0;
+  let total = 0;
+
+  for (const tr of tbody.rows){
+    const eventTxt = (tr.cells[5]?.textContent || '').trim();   // 이벤트
+    const scoreStr = (tr.cells[13]?.textContent || '').trim();  // 점수
+    const score    = parseFloat(scoreStr);
+
+    if (eventTxt === "[타격 이벤트]" || eventTxt === "[삼진/사사구/기타 이벤트]") {
+      pa += 1;
+    }
+    if (Number.isFinite(score)) total += score;
+  }
+  return { total, pa, avg: (pa > 0 ? total / pa : NaN) };
+}
+function renderPlateAppearanceAvg_Offense(){
+  const box = document.getElementById('paAdjBody');
+  if (!box) return;
+  const { total, pa, avg } = computePlateAppearanceAvg_Offense();
+  const fmt = (n)=> Number.isFinite(n) ? n.toFixed(3) : '-';
+  box.innerHTML = `
+    <table>
+      <tbody>
+        <tr><td style="text-align:left">점수 합계</td><td>${fmt(total)}</td></tr>
+        <tr><td style="text-align:left">타석수</td><td>${pa}</td></tr>
+        <tr><td style="text-align:left">타석 보정점수(평균)</td><td>${fmt(avg)}</td></tr>
+      </tbody>
+    </table>`;
+}
+
 /* ====== 초기화/라인업/배지 ====== */
 window.onload = () => {
   const starterDiv = document.getElementById("starterInputs");
@@ -607,7 +653,7 @@ function renderLineupSummary() {
 
 /* ====== 키 입력(편집 중엔 단축키 무시) ====== */
 document.addEventListener("keydown", (e) => {
-  if (isTypingInEditable(e)) return; // ★ 편집 중 충돌 방지(Backspace 등)
+  if (isTypingInEditable(e)) return;
   if (!lineupApplied) return;
 
   if (e.key === "Escape") {
@@ -632,7 +678,7 @@ document.addEventListener("keydown", (e) => {
     }
   }
 
-  // 성격/타구 성격 특수키
+  // 성격 특수키
   if (currentStep === 6) {
     const normalizedKey = (e.key === "\\" || e.key === "`") ? "₩" : e.key;
     const match = (options||[]).find(o => typeof o === "object" && o.key === normalizedKey);
@@ -805,9 +851,8 @@ function normalizePlayerKey(key) {
   return key;
 }
 
-/* ====== 행 쓰기(초기 자동 생성만) & 리셋 ====== */
+/* ====== 행 쓰기 & 리셋 ====== */
 function writeRowAndReset() {
-  // 초기 자동 생성은 기존과 동일(사용자가 원하면 이후 편집에서 덮어써도 재계산 안 함)
   const { code, score } = getCodeAndScore(currentValues);
   const tbody = document.getElementById("logTable").tBodies[0];
   const row = tbody.insertRow(0);
@@ -822,7 +867,6 @@ function writeRowAndReset() {
   row.insertCell(steps.length + 3).innerText = code || "-";
   row.insertCell(steps.length + 4).innerText = (score !== "" ? score : "-");
 
-  // 히스토리/최근 이닝
   const playerName = currentValues[2];
   const mini = makeShortPlay(currentValues);
   const inning = currentValues[0] || "";
@@ -833,9 +877,12 @@ function writeRowAndReset() {
   currentStep = 0; currentValues = []; eventType = "";
   updateLegend(); updateCurrentInputLine(); updateStepProgress();
   scheduleSave();
+
+  // ⬇️ 타석 보정점수 갱신
+  renderPlateAppearanceAvg_Offense();
 }
 
-/* ====== 테이블 직렬화/복구(편집값 그대로 저장/복원) ====== */
+/* ====== 테이블 직렬화/복구 ====== */
 function serializeTable(){
   const tbody = document.querySelector("#logTable tbody");
   const rows = [];
@@ -864,7 +911,7 @@ function renderTableFrom(rows){
     tr.insertCell(-1).innerText = (r.score !== undefined && r.score !== null) ? r.score : "-";
   });
 
-  // 히스토리(표 현재값 기준으로만 재구성) — 편집값을 존중
+  // 히스토리 재구성
   playHistoryMap = {};
   lastInning = "";
   (rows || []).forEach(r => {
@@ -876,9 +923,12 @@ function renderTableFrom(rows){
     if (!lastInning && vals[0]) lastInning = vals[0];
   });
   renderLineupSummary();
+
+  // ⬇️ 타석 보정점수 갱신
+  renderPlateAppearanceAvg_Offense();
 }
 
-/* ====== 편집 모드(무재계산; 모든 셀 직접 수정 가능) ====== */
+/* ====== 편집 모드 ====== */
 let editMode = false;
 function setEditMode(on){
   editMode = !!on;
@@ -887,9 +937,8 @@ function setEditMode(on){
   const btn = document.getElementById('toggleEdit');
   btn.textContent = `로그 수정: ${editMode?'ON':'OFF'}`;
 
-  // 0:chk, 1:#, 2..(2+steps.length-1)=이닝~결과, 그 뒤 record, code, score
   const editableStart = 2;
-  const editableEnd   = 13; // 이닝(2) ~ 점수(13)까지 전부
+  const editableEnd   = 13; // 이닝(2) ~ 점수(13)
   const rows = table.tBodies[0].rows;
   for (const tr of rows){
     for (let c=editableStart; c<=editableEnd; c++){
@@ -899,8 +948,11 @@ function setEditMode(on){
     }
   }
 
-  // 편집 종료 시 저장만(★ 어떤 재계산도 없음)
-  if(!editMode) scheduleSave();
+  if(!editMode){
+    scheduleSave();
+    // ⬇️ 편집 종료 시 보정점수 갱신
+    renderPlateAppearanceAvg_Offense();
+  }
 }
 
 /* ====== 삭제/선택/CSV/초기화 ====== */
@@ -912,7 +964,6 @@ function deleteSelectedRows() {
 
   const selectAll = document.getElementById('selectAll'); if (selectAll) selectAll.checked = false;
 
-  // 히스토리 재구성(편집/삭제 반영)
   const rows = serializeTable();
   playHistoryMap = {}; lastInning = "";
   rows.forEach(r => {
@@ -923,6 +974,9 @@ function deleteSelectedRows() {
   });
   renderLineupSummary();
   scheduleSave();
+
+  // ⬇️ 삭제 후 보정점수 갱신
+  renderPlateAppearanceAvg_Offense();
 }
 function csvEscape(value) { const v = (value ?? "").toString(); return `"${v.replace(/"/g, '""')}"`; }
 function tableToCSV() {
@@ -1010,6 +1064,9 @@ function bindResetAll(){
     updateLegend(); updateCurrentInputLine(); updateStepProgress();
     updateScheduleBadge();
     clearAllStorage();
+
+    // ⬇️ 초기화 후 보정점수 갱신
+    renderPlateAppearanceAvg_Offense();
   });
 }
 
