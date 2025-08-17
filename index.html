@@ -209,6 +209,7 @@
       <div class="actions">
         <button id="deleteSelected" class="btn">선택 삭제</button>
         <button id="exportCsv" class="btn">CSV 다운로드</button>
+        <button id="copyCsv" class="btn">CSV 복사</button>
         <button id="resetAll" class="btn-danger" title="라인업/진행상태/로그 전체 삭제">전체 초기화</button>
       </div>
     </div>
@@ -1110,6 +1111,50 @@ function setEditMode(on){
     renderLineupSummary();
   }
 }
+// ...기존 스크립트 위아래 생략...
+
+function copyCSVToClipboard(){
+  // CSV로 추출과 '완전히 같은 로직' 사용
+  const csv = tableToCSV(); // 성과객체명 포함, 일정명 컬럼 포함
+
+  const btn = document.getElementById('copyCsv');
+  const setLabel = (txt)=>{
+    if(!btn) return;
+    const original = btn.textContent;
+    btn.textContent = txt;
+    btn.disabled = true;
+    setTimeout(()=>{ btn.textContent = original; btn.disabled = false; }, 1200);
+  };
+
+  // 안전컨텍스트/권한 문제 대비: navigator.clipboard → 실패 시 execCommand 폴백
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(csv)
+      .then(()=> setLabel('복사 완료!'))
+      .catch(()=>{
+        fallbackCopyTextToClipboard(csv) ? setLabel('복사 완료!') : setLabel('복사 실패');
+      });
+  } else {
+    fallbackCopyTextToClipboard(csv) ? setLabel('복사 완료!') : setLabel('복사 실패');
+  }
+}
+
+function fallbackCopyTextToClipboard(text){
+  try{
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.top = '-1000px';
+    ta.style.left = '-1000px';
+    ta.setAttribute('readonly','');
+    document.body.appendChild(ta);
+    ta.select();
+    const ok = document.execCommand('copy');
+    document.body.removeChild(ta);
+    return ok;
+  }catch(e){
+    return false;
+  }
+}
 
 /* ====== 삭제/선택/CSV/초기화 ====== */
 function deleteSelectedRows() {
@@ -1190,7 +1235,11 @@ function setSelectAllBehavior() {
   });
   document.getElementById('deleteSelected').addEventListener('click', deleteSelectedRows);
   document.getElementById('exportCsv').addEventListener('click', downloadCSV);
+
+ const copyBtn = document.getElementById('copyCsv');
+  if (copyBtn) copyBtn.addEventListener('click', copyCSVToClipboard);
 }
+
 function bindResetAll(){
   const btn = document.getElementById("resetAll");
   btn.addEventListener("click", () => {
