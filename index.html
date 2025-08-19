@@ -970,22 +970,45 @@ document.addEventListener("keydown", (e) => {
     return;
   }
 
-  // 공통 1~9
-  if (e.key >= "1" && e.key <= "9") {
-    const index = parseInt(e.key) - 1;
-    if (options && options[index]) {
-      const val = options[index];
-      currentValues.push(typeof val === "object" ? val.label : val);
-      currentStep++;
+// 공통 1~9
+if (e.key >= "1" && e.key <= "9") {
+  const index = parseInt(e.key) - 1;
+  if (options && options[index]) {
+    const val = options[index];
+    currentValues.push(typeof val === "object" ? val.label : val);
+    currentStep++;
 
-      if (eventType === "[주루 이벤트]" && currentStep === 8) { writeRowAndReset(); return; }
-      if (currentStep === 9) { writeRowAndReset(); return; }
-
-      updateLegend(); updateCurrentInputLine(); updateStepProgress();
-      scheduleSave();
+    // 🔧 추가: 타격 이벤트에서 '병살타성' + '땅볼'이면 결과 단계(8단계)에 [더블 아웃] 옵션을 노출
+    //  - currentValues[6] : 성격
+    //  - currentValues[7] : 종류
+    if (eventType === "[타격 이벤트]" && currentStep === 8) {
+      const t = currentValues[6];  // 성격
+      const d = currentValues[7];  // 종류
+      if (t === "[병살타성]" && d === "[땅볼]") {
+        steps[8].options = [
+          { key: "1", label: "[출루]",         color: "green" },
+          { key: "2", label: "[타자 아웃]",     color: "red"   },
+          { key: "3", label: "[선행주자 아웃]", color: "red"   },
+          { key: "4", label: "[더블 아웃]",     color: "red"   }
+        ];
+      }
     }
-  }
 
+    if (eventType === "[주루 이벤트]" && currentStep === 8) { 
+      writeRowAndReset(); 
+      return; 
+    }
+    if (currentStep === 9) { 
+      writeRowAndReset(); 
+      return; 
+    }
+
+    updateLegend(); 
+    updateCurrentInputLine(); 
+    updateStepProgress();
+    scheduleSave();
+  }
+}
   if (e.key === "Backspace") {
     if (currentStep > 0) {
       currentStep--; currentValues.pop();
