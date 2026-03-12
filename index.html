@@ -137,6 +137,7 @@
     이글스 공격 성과평가 -<span style="font-size:.7em;color:#888;">시스템 v1.1</span>
   </h1>
 
+  <!-- 라인업/일정명 입력 -->
   <div class="lineup-input" id="lineupInput">
     <div class="schedRow">
       <label for="scheduleName"><strong>일정명:</strong></label>
@@ -152,6 +153,7 @@
     </div>
   </div>
 
+  <!-- 진행 스텝 표시 -->
   <div id="stepProgress"></div>
 
   <div class="topRow">
@@ -161,6 +163,7 @@
     </div>
 
     <div id="lineupSummary">
+      <!-- 헤더: '라인업' 바로 오른쪽에 최근 이닝 배지, 우측엔 일정 배지 -->
       <div style="display:flex;align-items:center;justify-content:space-between;margin:0 0 8px;">
         <h3 style="margin:0; display:flex; align-items:center; gap:8px;">
           라인업
@@ -180,9 +183,11 @@
           <h4>교체 (q~t)</h4>
           <div id="benchList"></div>
 
+          <!-- ⬇️ 타석 보정점수 -->
           <div id="paAdjBox">
             <h4 style="margin:6px 0 4px;">타석 보정점수</h4>
             <div id="paAdjBody" style="color:#6b7280; font-size:12px;">로그를 입력하면 자동 계산됩니다.</div>
+            <!-- ⬇️ 보정 요약 (신규) -->
             <div id="paAdjSummary"></div>
           </div>
         </div>
@@ -193,8 +198,10 @@
   <div id="currentInputLine">[현재 입력 중] → </div>
   <div id="hint">ESC: 전체 초기화(스텝만) / Backspace: 한 단계 롤백</div>
 
+  <!-- 로그 -->
   <div class="log">
     <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:5px;">
+      <!-- '입력 로그' 바로 오른쪽에 '로그 수정' 버튼 -->
       <div style="display:flex; align-items:center; gap:8px;">
         <h2 style="margin:0;">입력 로그</h2>
         <button id="toggleEdit" class="btn">로그 수정: OFF</button>
@@ -604,7 +611,7 @@ function computeLiveScoresByPlayer(){
  * 팀 평균 = (점수 합계) / (PA)
  * PA = 이벤트가 [타격 이벤트] 또는 [삼진/사사구 이벤트] 인 행의 개수
  * 표 컬럼 인덱스:
- * 0 chk, 1 #, 2 이닝, 3 타순, 4 선수, 5 이벤트, ..., 13 점수
+ *   0 chk, 1 #, 2 이닝, 3 타순, 4 선수, 5 이벤트, ..., 13 점수
  */
 function computePlateAppearanceAvg_Offense(){
   const tbody = document.querySelector('#logTable tbody');
@@ -1127,6 +1134,7 @@ function setEditMode(on){
     renderLineupSummary();
   }
 }
+// ...기존 스크립트 위아래 생략...
 
 function copyCSVToClipboard(){
   // CSV로 추출과 '완전히 같은 로직' 사용
@@ -1197,7 +1205,6 @@ function deleteSelectedRows() {
   renderLineupSummary();
 }
 function csvEscape(value) { const v = (value ?? "").toString(); return `"${v.replace(/"/g, '""')}"`; }
-
 function tableToCSV() {
   const table = document.getElementById("logTable");
   const thead = table.tHead;
@@ -1207,7 +1214,6 @@ function tableToCSV() {
   const headers = headerCells.map(th => th.textContent.trim());
   if (headers.length > 0) headers[0] = "성과객체명";
   headers.push("일정명");
-  headers.push("공격 채점 연결"); // 💡 추가된 헤더
 
   const rows = [headers.map(csvEscape).join(",")];
 
@@ -1218,21 +1224,13 @@ function tableToCSV() {
     const seq = vals[0] || "";
     const perfCsv = (scheduleNameState ? `${scheduleNameState} ${seq}` : seq);
     vals[0] = perfCsv;
-    
-    const schedName = scheduleNameState || "";
-    vals.push(schedName);
-
-    // 💡 추가된 데이터 조립 (일정명/공격/선수명)
-    const playerName = vals[3] || "";
-    const attackScoreLink = schedName ? `${schedName}/공격/${playerName}` : `/공격/${playerName}`;
-    vals.push(attackScoreLink);
+    vals.push(scheduleNameState || "");
 
     rows.push(vals.map(csvEscape).join(","));
   });
 
   return rows.join("\n");
 }
-
 function downloadCSV() {
   const csv = tableToCSV();
 
